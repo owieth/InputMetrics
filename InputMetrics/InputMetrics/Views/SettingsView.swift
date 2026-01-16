@@ -2,7 +2,7 @@ import SwiftUI
 import LaunchAtLogin
 
 struct SettingsView: View {
-    @State private var distanceUnit: DistanceUnit = .metric
+    @ObservedObject private var preferences = UserPreferences.shared
     @State private var showResetConfirmation = false
     @State private var exportMessage: String?
 
@@ -13,7 +13,7 @@ struct SettingsView: View {
             }
 
             Section("Display") {
-                Picker("Distance units", selection: $distanceUnit) {
+                Picker("Distance units", selection: $preferences.distanceUnit) {
                     Text("Metric (km/m)").tag(DistanceUnit.metric)
                     Text("Imperial (mi/ft)").tag(DistanceUnit.imperial)
                 }

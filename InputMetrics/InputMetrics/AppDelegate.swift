@@ -20,7 +20,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Create popover
         popover = NSPopover()
-        popover?.contentSize = NSSize(width: 320, height: 280)
+        popover?.contentSize = NSSize(width: 420, height: 600)
         popover?.behavior = .transient
         popover?.contentViewController = NSHostingController(rootView: MenuBarView())
 
@@ -35,7 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("InputMetrics launched successfully")
     }
 
-    @objc private func statusItemClicked() {
+    @MainActor @objc private func statusItemClicked() {
         guard let button = statusItem?.button else { return }
         guard let popover = popover else { return }
 
