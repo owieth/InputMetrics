@@ -5,6 +5,7 @@ final class DatabaseManager: @unchecked Sendable {
     static let shared = DatabaseManager()
 
     private var dbQueue: DatabaseQueue?
+    private let dbQueue_serial = DispatchQueue(label: "com.inputmetrics.database", qos: .userInitiated)
 
     private init() {
         setupDatabase()
@@ -98,30 +99,32 @@ final class DatabaseManager: @unchecked Sendable {
     ) {
         guard let db = dbQueue else { return }
 
-        do {
-            try db.write { db in
-                // Get existing or create new
-                if var summary = try DailySummary.fetchOne(db, key: date) {
-                    summary.mouseDistancePx += mouseDistance
-                    summary.mouseClicksLeft += leftClicks
-                    summary.mouseClicksRight += rightClicks
-                    summary.mouseClicksMiddle += middleClicks
-                    summary.keystrokes += keystrokes
-                    try summary.update(db)
-                } else {
-                    let newSummary = DailySummary(
-                        date: date,
-                        mouseDistancePx: mouseDistance,
-                        mouseClicksLeft: leftClicks,
-                        mouseClicksRight: rightClicks,
-                        mouseClicksMiddle: middleClicks,
-                        keystrokes: keystrokes
-                    )
-                    try newSummary.insert(db)
+        dbQueue_serial.async {
+            do {
+                try db.write { db in
+                    // Get existing or create new
+                    if var summary = try DailySummary.fetchOne(db, key: date) {
+                        summary.mouseDistancePx += mouseDistance
+                        summary.mouseClicksLeft += leftClicks
+                        summary.mouseClicksRight += rightClicks
+                        summary.mouseClicksMiddle += middleClicks
+                        summary.keystrokes += keystrokes
+                        try summary.update(db)
+                    } else {
+                        let newSummary = DailySummary(
+                            date: date,
+                            mouseDistancePx: mouseDistance,
+                            mouseClicksLeft: leftClicks,
+                            mouseClicksRight: rightClicks,
+                            mouseClicksMiddle: middleClicks,
+                            keystrokes: keystrokes
+                        )
+                        try newSummary.insert(db)
+                    }
                 }
+            } catch {
+                print("Error updating daily summary: \(error)")
             }
-        } catch {
-            print("Error updating daily summary: \(error)")
         }
     }
 
@@ -159,29 +162,31 @@ final class DatabaseManager: @unchecked Sendable {
     func updateMouseHeatmap(date: String, screenId: String, bucketX: Int, bucketY: Int) {
         guard let db = dbQueue else { return }
 
-        do {
-            try db.write { db in
-                if var entry = try MouseHeatmapEntry
-                    .filter(MouseHeatmapEntry.Columns.date == date)
-                    .filter(MouseHeatmapEntry.Columns.screenId == screenId)
-                    .filter(MouseHeatmapEntry.Columns.bucketX == bucketX)
-                    .filter(MouseHeatmapEntry.Columns.bucketY == bucketY)
-                    .fetchOne(db) {
-                    entry.clickCount += 1
-                    try entry.update(db)
-                } else {
-                    let newEntry = MouseHeatmapEntry(
-                        date: date,
-                        screenId: screenId,
-                        bucketX: bucketX,
-                        bucketY: bucketY,
-                        clickCount: 1
-                    )
-                    try newEntry.insert(db)
+        dbQueue_serial.async {
+            do {
+                try db.write { db in
+                    if var entry = try MouseHeatmapEntry
+                        .filter(MouseHeatmapEntry.Columns.date == date)
+                        .filter(MouseHeatmapEntry.Columns.screenId == screenId)
+                        .filter(MouseHeatmapEntry.Columns.bucketX == bucketX)
+                        .filter(MouseHeatmapEntry.Columns.bucketY == bucketY)
+                        .fetchOne(db) {
+                        entry.clickCount += 1
+                        try entry.update(db)
+                    } else {
+                        let newEntry = MouseHeatmapEntry(
+                            date: date,
+                            screenId: screenId,
+                            bucketX: bucketX,
+                            bucketY: bucketY,
+                            clickCount: 1
+                        )
+                        try newEntry.insert(db)
+                    }
                 }
+            } catch {
+                print("Error updating mouse heatmap: \(error)")
             }
-        } catch {
-            print("Error updating mouse heatmap: \(error)")
         }
     }
 
@@ -205,27 +210,29 @@ final class DatabaseManager: @unchecked Sendable {
     func updateKeyboard(date: String, keyCode: Int, modifierFlags: Int = 0) {
         guard let db = dbQueue else { return }
 
-        do {
-            try db.write { db in
-                if var entry = try KeyboardEntry
-                    .filter(KeyboardEntry.Columns.date == date)
-                    .filter(KeyboardEntry.Columns.keyCode == keyCode)
-                    .filter(KeyboardEntry.Columns.modifierFlags == modifierFlags)
-                    .fetchOne(db) {
-                    entry.count += 1
-                    try entry.update(db)
-                } else {
-                    let newEntry = KeyboardEntry(
-                        date: date,
-                        keyCode: keyCode,
-                        modifierFlags: modifierFlags,
-                        count: 1
-                    )
-                    try newEntry.insert(db)
+        dbQueue_serial.async {
+            do {
+                try db.write { db in
+                    if var entry = try KeyboardEntry
+                        .filter(KeyboardEntry.Columns.date == date)
+                        .filter(KeyboardEntry.Columns.keyCode == keyCode)
+                        .filter(KeyboardEntry.Columns.modifierFlags == modifierFlags)
+                        .fetchOne(db) {
+                        entry.count += 1
+                        try entry.update(db)
+                    } else {
+                        let newEntry = KeyboardEntry(
+                            date: date,
+                            keyCode: keyCode,
+                            modifierFlags: modifierFlags,
+                            count: 1
+                        )
+                        try newEntry.insert(db)
+                    }
                 }
+            } catch {
+                print("Error updating keyboard entry: \(error)")
             }
-        } catch {
-            print("Error updating keyboard entry: \(error)")
         }
     }
 
@@ -249,16 +256,18 @@ final class DatabaseManager: @unchecked Sendable {
     func resetAllData() {
         guard let db = dbQueue else { return }
 
-        do {
-            try db.write { db in
-                try db.execute(sql: "DELETE FROM daily_summary")
-                try db.execute(sql: "DELETE FROM mouse_heatmap")
-                try db.execute(sql: "DELETE FROM keyboard_heatmap")
-                try db.execute(sql: "DELETE FROM hourly_summary")
+        dbQueue_serial.async {
+            do {
+                try db.write { db in
+                    try db.execute(sql: "DELETE FROM daily_summary")
+                    try db.execute(sql: "DELETE FROM mouse_heatmap")
+                    try db.execute(sql: "DELETE FROM keyboard_heatmap")
+                    try db.execute(sql: "DELETE FROM hourly_summary")
+                }
+                print("All data reset successfully")
+            } catch {
+                print("Error resetting data: \(error)")
             }
-            print("All data reset successfully")
-        } catch {
-            print("Error resetting data: \(error)")
         }
     }
 }
