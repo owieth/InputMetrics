@@ -5,39 +5,172 @@ struct SettingsView: View {
     @ObservedObject private var preferences = UserPreferences.shared
     @State private var showResetConfirmation = false
     @State private var exportMessage: String?
+    @State private var showExportSuccess = false
 
     var body: some View {
-        Form {
-            Section("General") {
-                LaunchAtLogin.Toggle("Launch at login")
+        ZStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(spacing: 8) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.blue.gradient)
+
+                        Text("Settings")
+                            .font(.title.bold())
+
+                        Text("Customize your InputMetrics experience")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 32)
+
+                    // General Section
+                    SettingsSectionView(title: "General", icon: "slider.horizontal.3") {
+                        SettingsRowView {
+                            HStack {
+                                Label("Launch at login", systemImage: "power")
+                                    .font(.body)
+
+                                Spacer()
+
+                                LaunchAtLogin.Toggle {
+                                    EmptyView()
+                                }
+                                .labelsHidden()
+                            }
+                        }
+                    }
+
+                    // Display Section
+                    SettingsSectionView(title: "Display", icon: "ruler") {
+                        SettingsRowView {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Label("Distance units", systemImage: "arrow.left.and.right")
+                                    .font(.body)
+
+                                Picker("", selection: $preferences.distanceUnit) {
+                                    Label("Metric (km/m)", systemImage: "m.square")
+                                        .tag(DistanceUnit.metric)
+                                    Label("Imperial (mi/ft)", systemImage: "i.square")
+                                        .tag(DistanceUnit.imperial)
+                                }
+                                .pickerStyle(.segmented)
+                                .labelsHidden()
+                            }
+                        }
+                    }
+
+                    // Data Section
+                    SettingsSectionView(title: "Data", icon: "externaldrive") {
+                        VStack(spacing: 12) {
+                            Button(action: {
+                                exportData()
+                            }) {
+                                HStack {
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.title3)
+                                        .foregroundStyle(.blue)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Export data")
+                                            .font(.body.weight(.medium))
+                                            .foregroundStyle(.primary)
+
+                                        Text("Save your metrics as CSV")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding()
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
+
+                            Button(action: {
+                                showResetConfirmation = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "trash")
+                                        .font(.title3)
+                                        .foregroundStyle(.red)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Reset all data")
+                                            .font(.body.weight(.medium))
+                                            .foregroundStyle(.primary)
+
+                                        Text("Permanently delete all metrics")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding()
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(12)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // Footer
+                    VStack(spacing: 4) {
+                        Text("InputMetrics")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("Track your productivity")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+
+                        Text("© 2026 InputMetrics. All rights reserved.")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .padding(.top, 8)
+                    }
+                    .padding(.bottom, 32)
+                }
+                .padding(.horizontal, 32)
             }
 
-            Section("Display") {
-                Picker("Distance units", selection: $preferences.distanceUnit) {
-                    Text("Metric (km/m)").tag(DistanceUnit.metric)
-                    Text("Imperial (mi/ft)").tag(DistanceUnit.imperial)
-                }
-            }
+            // Success notification
+            if showExportSuccess, let message = exportMessage {
+                VStack {
+                    Spacer()
 
-            Section("Data") {
-                Button("Export data as CSV") {
-                    exportData()
-                }
+                    HStack(spacing: 12) {
+                        Image(systemName: message.contains("success") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(message.contains("success") ? .green : .red)
 
-                Button("Reset all data", role: .destructive) {
-                    showResetConfirmation = true
+                        Text(message)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                    }
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(12)
+                    .shadow(radius: 8)
+                    .padding()
                 }
-            }
-
-            if let message = exportMessage {
-                Section {
-                    Text(message)
-                        .foregroundStyle(.secondary)
-                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .formStyle(.grouped)
-        .frame(minWidth: 500, minHeight: 400)
+        .frame(minWidth: 600, minHeight: 500)
         .alert("Reset all data?", isPresented: $showResetConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Reset", role: .destructive) {
@@ -45,6 +178,23 @@ struct SettingsView: View {
             }
         } message: {
             Text("This will permanently delete all tracking data. This action cannot be undone.")
+        }
+        .onChange(of: exportMessage) { oldValue, newValue in
+            if newValue != nil {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    showExportSuccess = true
+                }
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    withAnimation {
+                        showExportSuccess = false
+                    }
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        exportMessage = nil
+                    }
+                }
+            }
         }
     }
 
@@ -112,6 +262,42 @@ struct SettingsView: View {
     private func resetData() {
         DatabaseManager.shared.resetAllData()
         exportMessage = "All data has been reset"
+    }
+}
+
+// MARK: - Helper Views
+
+struct SettingsSectionView<Content: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label {
+                Text(title)
+                    .font(.headline)
+            } icon: {
+                Image(systemName: icon)
+                    .foregroundStyle(.blue)
+            }
+            .padding(.horizontal)
+
+            content()
+        }
+    }
+}
+
+struct SettingsRowView<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        content()
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.secondary.opacity(0.1))
+            .cornerRadius(12)
+            .padding(.horizontal)
     }
 }
 
