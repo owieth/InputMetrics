@@ -1,0 +1,18 @@
+import Foundation
+import GRDB
+
+struct KeyboardEntry: Codable, FetchableRecord, PersistableRecord {
+    static let databaseTableName = "keyboard_heatmap"
+
+    var date: String
+    var keyCode: Int
+    var modifierFlags: Int
+    var count: Int
+
+    enum Columns {
+        static let date = Column(CodingKeys.date)
+        static let keyCode = Column(CodingKeys.keyCode)
+        static let modifierFlags = Column(CodingKeys.modifierFlags)
+        static let count = Column(CodingKeys.count)
+    }
+}
