@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct MenuBarView: View {
     @State private var mouseDistance: Double = 0
@@ -17,14 +18,14 @@ struct MenuBarView: View {
                     .font(.headline)
                 Spacer()
                 Button(action: {
-                    // TODO: Open settings
+                    WindowManager.shared.openSettingsWindow()
                 }) {
                     Image(systemName: "gearshape")
                 }
                 .buttonStyle(.plain)
 
                 Button(action: {
-                    // TODO: Open main window
+                    WindowManager.shared.openDashboardWindow()
                 }) {
                     Image(systemName: "arrow.up.forward.square")
                 }
@@ -127,6 +128,58 @@ struct MenuBarView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
+    }
+}
+
+@MainActor
+class WindowManager: ObservableObject {
+    static let shared = WindowManager()
+
+    private var settingsWindow: NSWindow?
+    private var dashboardWindow: NSWindow?
+
+    private init() {}
+
+    func openSettingsWindow() {
+        if let window = settingsWindow, window.isVisible {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let settingsView = SettingsView()
+        let hostingController = NSHostingController(rootView: settingsView)
+
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "Settings"
+        window.styleMask = [.titled, .closable]
+        window.setContentSize(NSSize(width: 500, height: 400))
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+
+        settingsWindow = window
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func openDashboardWindow() {
+        if let window = dashboardWindow, window.isVisible {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let dashboardView = MainWindowView()
+        let hostingController = NSHostingController(rootView: dashboardView)
+
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "InputMetrics Dashboard"
+        window.styleMask = [.titled, .closable, .resizable]
+        window.setContentSize(NSSize(width: 800, height: 600))
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+
+        dashboardWindow = window
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
