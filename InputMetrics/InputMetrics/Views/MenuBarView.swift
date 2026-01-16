@@ -41,13 +41,6 @@ struct MenuBarView: View {
                 .labelsHidden()
 
                 Spacer()
-
-                Button(action: {
-                    NSApp.terminate(nil)
-                }) {
-                    Image(systemName: "xmark")
-                }
-                .buttonStyle(.plain)
             }
             .padding()
 

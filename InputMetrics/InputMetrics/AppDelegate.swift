@@ -16,6 +16,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.image = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "InputMetrics")
             button.action = #selector(statusItemClicked)
             button.target = self
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
 
         // Create popover
@@ -36,13 +37,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor @objc private func statusItemClicked() {
+        guard let event = NSApp.currentEvent else { return }
         guard let button = statusItem?.button else { return }
-        guard let popover = popover else { return }
 
-        if popover.isShown {
-            popover.performClose(nil)
+        // Check if it's a right-click
+        if event.type == .rightMouseUp {
+            // Show context menu
+            let menu = NSMenu()
+            menu.addItem(NSMenuItem(title: "Settings", action: #selector(openSettings), keyEquivalent: ","))
+            menu.addItem(NSMenuItem.separator())
+            menu.addItem(NSMenuItem(title: "Quit InputMetrics", action: #selector(quitApp), keyEquivalent: "q"))
+
+            statusItem?.menu = menu
+            button.performClick(nil)
+            statusItem?.menu = nil
         } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            // Left-click - toggle popover
+            guard let popover = popover else { return }
+
+            if popover.isShown {
+                popover.performClose(nil)
+            } else {
+                popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            }
         }
+    }
+
+    @MainActor @objc private func openSettings() {
+        WindowManager.shared.openSettingsWindow()
+    }
+
+    @MainActor @objc private func quitApp() {
+        NSApp.terminate(nil)
     }
 }
