@@ -13,6 +13,9 @@ struct MenuBarView: View {
     @State private var chartData: [DailySummary] = []
     @State private var heatmapData: [[Int]] = []
     @State private var keyboardEntries: [KeyboardEntry] = []
+    @State private var allTimeDistance: Double = 0
+    @State private var allTimeClicks: Int = 0
+    @State private var allTimeKeystrokes: Int = 0
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -57,6 +60,12 @@ struct MenuBarView: View {
                     } else {
                         keyboardMetricsView
                     }
+
+                    Divider()
+                        .padding(.horizontal)
+
+                    // All Time Stats
+                    allTimeStatsView
                 }
                 .padding(.vertical)
             }
@@ -64,12 +73,14 @@ struct MenuBarView: View {
         .frame(width: 420, height: 600)
         .onReceive(timer) { _ in
             updateStats()
+            loadAllTimeStats()
         }
         .onAppear {
             updateStats()
             loadChartData()
             loadHeatmapData()
             loadKeyboardData()
+            loadAllTimeStats()
         }
     }
 
@@ -267,6 +278,76 @@ struct MenuBarView: View {
         }
     }
 
+    private var allTimeStatsView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("All Time")
+                .font(.title3.bold())
+                .padding(.horizontal)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                // Total Distance
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Distance", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    let meters = DistanceConverter.pixelsToMeters(allTimeDistance)
+                    if preferences.distanceUnit == .metric {
+                        if meters < 1000 {
+                            Text(String(format: "%.0f m", meters))
+                                .font(.title2.bold().monospacedDigit())
+                        } else {
+                            Text(String(format: "%.1f km", meters / 1000))
+                                .font(.title2.bold().monospacedDigit())
+                        }
+                    } else {
+                        let feet = meters * 3.28084
+                        if feet < 5280 {
+                            Text(String(format: "%.0f ft", feet))
+                                .font(.title2.bold().monospacedDigit())
+                        } else {
+                            Text(String(format: "%.1f mi", feet / 5280))
+                                .font(.title2.bold().monospacedDigit())
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(12)
+
+                // Total Clicks
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Clicks", systemImage: "cursorarrow.click")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("\(allTimeClicks)")
+                        .font(.title2.bold().monospacedDigit())
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(12)
+
+                // Total Keystrokes
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Keystrokes", systemImage: "keyboard")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("\(allTimeKeystrokes)")
+                        .font(.title2.bold().monospacedDigit())
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(Color.purple.opacity(0.1))
+                .cornerRadius(12)
+            }
+            .padding(.horizontal)
+        }
+    }
+
     private func updateStats() {
         let mouseStats = MouseTracker.shared.getCurrentStats()
         let keyboardStats = KeyboardTracker.shared.getCurrentKeystrokes()
@@ -318,6 +399,30 @@ struct MenuBarView: View {
     private func loadKeyboardData() {
         let today = getTodayString()
         keyboardEntries = DatabaseManager.shared.getKeyboardEntries(date: today)
+    }
+
+    private func loadAllTimeStats() {
+        let allSummaries = DatabaseManager.shared.getAllDailySummaries()
+
+        var totalDistance: Double = 0
+        var totalClicks: Int = 0
+        var totalKeys: Int = 0
+
+        for summary in allSummaries {
+            totalDistance += summary.mouseDistancePx
+            totalClicks += summary.mouseClicksLeft + summary.mouseClicksRight + summary.mouseClicksMiddle
+            totalKeys += summary.keystrokes
+        }
+
+        // Add current session counters (not yet persisted)
+        let mouseStats = MouseTracker.shared.getCurrentStats()
+        totalDistance += mouseStats.distance
+        totalClicks += mouseStats.left + mouseStats.right + mouseStats.middle
+        totalKeys += KeyboardTracker.shared.getCurrentKeystrokes()
+
+        allTimeDistance = totalDistance
+        allTimeClicks = totalClicks
+        allTimeKeystrokes = totalKeys
     }
 
     private func shortDay(from dateString: String) -> String {
