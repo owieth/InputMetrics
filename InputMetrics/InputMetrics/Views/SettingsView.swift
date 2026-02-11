@@ -28,17 +28,31 @@ struct SettingsView: View {
 
                     // General Section
                     SettingsSectionView(title: "General", icon: "slider.horizontal.3") {
-                        SettingsRowView {
-                            HStack {
-                                Label("Launch at login", systemImage: "power")
-                                    .font(.body)
+                        VStack(spacing: 0) {
+                            SettingsRowView {
+                                HStack {
+                                    Label("Launch at login", systemImage: "power")
+                                        .font(.body)
 
-                                Spacer()
+                                    Spacer()
 
-                                LaunchAtLogin.Toggle {
-                                    EmptyView()
+                                    LaunchAtLogin.Toggle {
+                                        EmptyView()
+                                    }
+                                    .labelsHidden()
                                 }
-                                .labelsHidden()
+                            }
+
+                            SettingsRowView {
+                                HStack {
+                                    Label("Show live stats in menu bar", systemImage: "chart.bar")
+                                        .font(.body)
+
+                                    Spacer()
+
+                                    Toggle("", isOn: $preferences.showLiveStats)
+                                        .labelsHidden()
+                                }
                             }
                         }
                     }

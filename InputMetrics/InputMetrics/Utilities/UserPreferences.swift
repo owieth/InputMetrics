@@ -10,8 +10,15 @@ class UserPreferences: ObservableObject {
         }
     }
 
+    @Published var showLiveStats: Bool {
+        didSet {
+            UserDefaults.standard.set(showLiveStats, forKey: "showLiveStats")
+        }
+    }
+
     private init() {
         let savedUnit = UserDefaults.standard.string(forKey: "distanceUnit") ?? "metric"
         self.distanceUnit = savedUnit == "metric" ? .metric : .imperial
+        self.showLiveStats = UserDefaults.standard.object(forKey: "showLiveStats") as? Bool ?? true
     }
 }

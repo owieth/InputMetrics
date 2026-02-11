@@ -4,6 +4,7 @@ import AppKit
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
+    private var liveStatsTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize database
@@ -14,6 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         if let button = statusItem?.button {
             button.image = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "InputMetrics")
+            button.imagePosition = .imageLeading
             button.action = #selector(statusItemClicked)
             button.target = self
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -32,6 +34,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             EventMonitor.shared.start()
         }
+
+        // Start live stats timer
+        startLiveStatsTimer()
 
         print("InputMetrics launched successfully")
     }
@@ -69,5 +74,62 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+
+    // MARK: - Live Stats
+
+    private func startLiveStatsTimer() {
+        liveStatsTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateLiveStats()
+            }
+        }
+    }
+
+    @MainActor private func updateLiveStats() {
+        guard let button = statusItem?.button else { return }
+        guard UserPreferences.shared.showLiveStats else {
+            button.title = ""
+            return
+        }
+
+        let mouseStats = MouseTracker.shared.getCurrentStats()
+        let keyboardStats = KeyboardTracker.shared.getCurrentKeystrokes()
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = formatter.string(from: Date())
+
+        var totalDistance = mouseStats.distance
+        var totalKeystrokes = keyboardStats
+
+        if let summary = DatabaseManager.shared.getDailySummary(date: today) {
+            totalDistance += summary.mouseDistancePx
+            totalKeystrokes += summary.keystrokes
+        }
+
+        let distanceMeters = totalDistance / 4330.0
+        let distanceText = formatDistance(distanceMeters)
+        let keystrokesText = formatCount(totalKeystrokes)
+
+        button.title = " \(distanceText) · \(keystrokesText)"
+    }
+
+    private func formatDistance(_ meters: Double) -> String {
+        if meters >= 1000 {
+            return String(format: "%.1fkm", meters / 1000)
+        } else {
+            return String(format: "%.0fm", meters)
+        }
+    }
+
+    private func formatCount(_ count: Int) -> String {
+        if count >= 1_000_000 {
+            return String(format: "%.1fM", Double(count) / 1_000_000)
+        } else if count >= 1000 {
+            return String(format: "%.1fk", Double(count) / 1000)
+        } else {
+            return "\(count)"
+        }
     }
 }
