@@ -51,6 +51,10 @@ class KeyboardTracker {
         print("Keyboard data persisted: \(count) keystrokes")
     }
 
+    func reset() {
+        totalKeystrokes = 0
+    }
+
     func getCurrentKeystrokes() -> Int {
         return totalKeystrokes
     }

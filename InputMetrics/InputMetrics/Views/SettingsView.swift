@@ -317,6 +317,8 @@ struct SettingsView: View {
 
     private func resetData() {
         DatabaseManager.shared.resetAllData()
+        MouseTracker.shared.reset()
+        KeyboardTracker.shared.reset()
         exportResult = .success("All data has been reset")
     }
 }

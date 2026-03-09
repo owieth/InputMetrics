@@ -93,6 +93,14 @@ class MouseTracker {
         print("Mouse data persisted: \(persistedDistance)px, L:\(persistedLeft) R:\(persistedRight) M:\(persistedMiddle)")
     }
 
+    func reset() {
+        accumulatedDistance = 0
+        leftClicks = 0
+        rightClicks = 0
+        middleClicks = 0
+        lastPoint = nil
+    }
+
     func getCurrentStats() -> (distance: Double, left: Int, right: Int, middle: Int) {
         return (accumulatedDistance, leftClicks, rightClicks, middleClicks)
     }
