@@ -31,6 +31,8 @@ struct SettingsView: View {
     @State private var showResetConfirmation = false
     @State private var exportResult: ExportResult?
     @State private var showExportToast = false
+    @State private var databaseSize: String = "Calculating..."
+    @State private var totalRecords: Int = 0
 
     var body: some View {
         ZStack {
@@ -97,6 +99,64 @@ struct SettingsView: View {
                                 }
                                 .pickerStyle(.segmented)
                                 .labelsHidden()
+                            }
+                        }
+                    }
+
+                    // Storage Section
+                    SettingsSectionView(title: "Storage", icon: "internaldrive") {
+                        VStack(spacing: 0) {
+                            SettingsRowView {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Label("Data retention", systemImage: "clock.arrow.circlepath")
+                                        .font(.body)
+
+                                    Picker("", selection: $preferences.dataRetentionPeriod) {
+                                        ForEach(DataRetentionPeriod.allCases) { period in
+                                            Text(period.displayName).tag(period)
+                                        }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .labelsHidden()
+                                    .onChange(of: preferences.dataRetentionPeriod) { _, newValue in
+                                        if let days = newValue.days {
+                                            DatabaseManager.shared.pruneOldData(olderThanDays: days)
+                                            refreshDatabaseInfo()
+                                        }
+                                    }
+
+                                    Text("Data older than the selected period is automatically deleted on app launch.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            SettingsRowView {
+                                HStack {
+                                    Label("Database size", systemImage: "externaldrive")
+                                        .font(.body)
+
+                                    Spacer()
+
+                                    Text(databaseSize)
+                                        .font(.body)
+                                        .monospacedDigit()
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            SettingsRowView {
+                                HStack {
+                                    Label("Total records", systemImage: "number")
+                                        .font(.body)
+
+                                    Spacer()
+
+                                    Text("\(totalRecords)")
+                                        .font(.body)
+                                        .monospacedDigit()
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                     }
@@ -217,6 +277,9 @@ struct SettingsView: View {
         } message: {
             Text("This will permanently delete all tracking data. This action cannot be undone.")
         }
+        .onAppear {
+            refreshDatabaseInfo()
+        }
         .onChange(of: exportResult?.message) { oldValue, newValue in
             if newValue != nil {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
@@ -320,6 +383,22 @@ struct SettingsView: View {
         MouseTracker.shared.reset()
         KeyboardTracker.shared.reset()
         exportResult = .success("All data has been reset")
+        refreshDatabaseInfo()
+    }
+
+    private func refreshDatabaseInfo() {
+        let sizeBytes = DatabaseManager.shared.getDatabaseFileSize()
+        databaseSize = formatFileSize(sizeBytes)
+
+        let counts = DatabaseManager.shared.getRecordCounts()
+        totalRecords = counts.dailySummaries + counts.mouseHeatmap + counts.keyboardHeatmap + counts.hourlySummaries
+    }
+
+    private func formatFileSize(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useKB, .useMB, .useGB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
     }
 }
 
