@@ -300,17 +300,39 @@ final class DatabaseManager: @unchecked Sendable {
         }
     }
 
-    func getMouseHeatmap(date: String) -> [MouseHeatmapEntry] {
+    func getMouseHeatmap(date: String, screenId: String? = nil) -> [MouseHeatmapEntry] {
         guard let db = dbQueue else { return [] }
 
         do {
             return try db.read { db in
-                try MouseHeatmapEntry
+                var request = MouseHeatmapEntry
                     .filter(MouseHeatmapEntry.Columns.date == date)
-                    .fetchAll(db)
+
+                if let screenId {
+                    request = request.filter(MouseHeatmapEntry.Columns.screenId == screenId)
+                }
+
+                return try request.fetchAll(db)
             }
         } catch {
             print("Error fetching mouse heatmap: \(error)")
+            return []
+        }
+    }
+
+    func getDistinctScreenIds(date: String) -> [String] {
+        guard let db = dbQueue else { return [] }
+
+        do {
+            return try db.read { db in
+                try String.fetchAll(
+                    db,
+                    sql: "SELECT DISTINCT screen_id FROM mouse_heatmap WHERE date = ? ORDER BY screen_id",
+                    arguments: [date]
+                )
+            }
+        } catch {
+            print("Error fetching screen IDs: \(error)")
             return []
         }
     }
