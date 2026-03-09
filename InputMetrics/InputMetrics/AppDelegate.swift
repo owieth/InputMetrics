@@ -125,19 +125,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         formatter.dateFormat = "yyyy-MM-dd"
         let today = formatter.string(from: Date())
 
-        var totalDistance = mouseStats.distance
-        var totalKeystrokes = keyboardStats
+        Task.detached { [weak self] in
+            let summary = DatabaseManager.shared.getDailySummary(date: today)
 
-        if let summary = DatabaseManager.shared.getDailySummary(date: today) {
-            totalDistance += summary.mouseDistancePx
-            totalKeystrokes += summary.keystrokes
+            await MainActor.run {
+                guard let self else { return }
+
+                var totalDistance = mouseStats.distance
+                var totalKeystrokes = keyboardStats
+
+                if let summary {
+                    totalDistance += summary.mouseDistancePx
+                    totalKeystrokes += summary.keystrokes
+                }
+
+                let distanceMeters = totalDistance / 4330.0
+                let distanceText = self.formatDistance(distanceMeters)
+                let keystrokesText = self.formatCount(totalKeystrokes)
+
+                button.title = " \(distanceText) · \(keystrokesText)"
+            }
         }
-
-        let distanceMeters = totalDistance / 4330.0
-        let distanceText = formatDistance(distanceMeters)
-        let keystrokesText = formatCount(totalKeystrokes)
-
-        button.title = " \(distanceText) · \(keystrokesText)"
     }
 
     private func formatDistance(_ meters: Double) -> String {
