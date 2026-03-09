@@ -1,5 +1,32 @@
 import Foundation
 
+enum DataRetentionPeriod: String, CaseIterable, Identifiable {
+    case threeMonths = "3months"
+    case sixMonths = "6months"
+    case oneYear = "1year"
+    case forever = "forever"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .threeMonths: return "3 months"
+        case .sixMonths: return "6 months"
+        case .oneYear: return "1 year"
+        case .forever: return "Forever"
+        }
+    }
+
+    var days: Int? {
+        switch self {
+        case .threeMonths: return 90
+        case .sixMonths: return 180
+        case .oneYear: return 365
+        case .forever: return nil
+        }
+    }
+}
+
 @MainActor
 class UserPreferences: ObservableObject {
     static let shared = UserPreferences()
@@ -16,9 +43,18 @@ class UserPreferences: ObservableObject {
         }
     }
 
+    @Published var dataRetentionPeriod: DataRetentionPeriod {
+        didSet {
+            UserDefaults.standard.set(dataRetentionPeriod.rawValue, forKey: "dataRetentionPeriod")
+        }
+    }
+
     private init() {
         let savedUnit = UserDefaults.standard.string(forKey: "distanceUnit") ?? "metric"
         self.distanceUnit = savedUnit == "metric" ? .metric : .imperial
         self.showLiveStats = UserDefaults.standard.object(forKey: "showLiveStats") as? Bool ?? true
+
+        let savedRetention = UserDefaults.standard.string(forKey: "dataRetentionPeriod") ?? "forever"
+        self.dataRetentionPeriod = DataRetentionPeriod(rawValue: savedRetention) ?? .forever
     }
 }

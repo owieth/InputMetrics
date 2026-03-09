@@ -386,4 +386,74 @@ final class DatabaseManager: @unchecked Sendable {
             }
         }
     }
+
+    // MARK: - Data Retention
+
+    func pruneOldData(olderThanDays days: Int) {
+        guard let db = dbQueue else { return }
+
+        let calendar = Calendar.current
+        guard let cutoffDate = calendar.date(byAdding: .day, value: -days, to: Date()) else { return }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        let cutoffString = formatter.string(from: cutoffDate)
+
+        dbQueue_serial.async {
+            do {
+                try db.write { db in
+                    try db.execute(sql: "DELETE FROM daily_summary WHERE date < ?", arguments: [cutoffString])
+                    try db.execute(sql: "DELETE FROM mouse_heatmap WHERE date < ?", arguments: [cutoffString])
+                    try db.execute(sql: "DELETE FROM keyboard_heatmap WHERE date < ?", arguments: [cutoffString])
+                    try db.execute(sql: "DELETE FROM hourly_summary WHERE date < ?", arguments: [cutoffString])
+                    try db.execute(sql: "VACUUM")
+                }
+                print("Pruned data older than \(cutoffString)")
+            } catch {
+                print("Error pruning old data: \(error)")
+            }
+        }
+    }
+
+    // MARK: - Database Size
+
+    func getDatabaseFileSize() -> Int64 {
+        do {
+            let fileManager = FileManager.default
+            let appSupport = try fileManager.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: false
+            )
+
+            let dbPath = appSupport
+                .appendingPathComponent("InputMetrics", isDirectory: true)
+                .appendingPathComponent("metrics.db")
+
+            let attributes = try fileManager.attributesOfItem(atPath: dbPath.path)
+            return attributes[.size] as? Int64 ?? 0
+        } catch {
+            print("Error getting database file size: \(error)")
+            return 0
+        }
+    }
+
+    func getRecordCounts() -> (dailySummaries: Int, mouseHeatmap: Int, keyboardHeatmap: Int, hourlySummaries: Int) {
+        guard let db = dbQueue else { return (0, 0, 0, 0) }
+
+        do {
+            return try db.read { db in
+                let daily = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM daily_summary") ?? 0
+                let mouse = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM mouse_heatmap") ?? 0
+                let keyboard = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM keyboard_heatmap") ?? 0
+                let hourly = try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM hourly_summary") ?? 0
+                return (daily, mouse, keyboard, hourly)
+            }
+        } catch {
+            print("Error getting record counts: \(error)")
+            return (0, 0, 0, 0)
+        }
+    }
 }

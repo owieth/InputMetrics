@@ -43,6 +43,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Hide dock icon for menu bar-only app
         NSApp.setActivationPolicy(.accessory)
 
+        // Run data retention cleanup
+        let retentionPeriod = UserPreferences.shared.dataRetentionPeriod
+        if let days = retentionPeriod.days {
+            DatabaseManager.shared.pruneOldData(olderThanDays: days)
+        }
+
         // Start event monitoring on main actor
         Task { @MainActor in
             EventMonitor.shared.start()
