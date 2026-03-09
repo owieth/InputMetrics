@@ -71,27 +71,27 @@ class EventMonitor {
     }
 
     private func handleEvent(type: CGEventType, event: CGEvent) {
+        // Extract all values synchronously before the callback returns,
+        // since the CGEvent may be deallocated after the callback exits.
+        let location = event.location
+        let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
+        let flags = event.flags
+
         Task { @MainActor in
             switch type {
             case .mouseMoved:
-                let location = event.location
                 MouseTracker.shared.trackMovement(to: location)
 
             case .leftMouseDown:
-                let location = event.location
                 MouseTracker.shared.trackClick(type: .left, at: location)
 
             case .rightMouseDown:
-                let location = event.location
                 MouseTracker.shared.trackClick(type: .right, at: location)
 
             case .otherMouseDown:
-                let location = event.location
                 MouseTracker.shared.trackClick(type: .middle, at: location)
 
             case .keyDown:
-                let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
-                let flags = event.flags
                 KeyboardTracker.shared.trackKeystroke(keyCode: keyCode, modifierFlags: flags)
 
             default:
