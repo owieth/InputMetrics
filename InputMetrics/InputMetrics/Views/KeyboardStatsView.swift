@@ -39,8 +39,8 @@ struct KeyboardStatsView: View {
                     .font(.headline)
 
                 HStack(spacing: 12) {
-                    ForEach(topKeys(), id: \.0) { key, count in
-                        Text("\(key) (\(count))")
+                    ForEach(topKeys(), id: \.id) { entry in
+                        Text("\(entry.name) (\(entry.count))")
                             .font(.caption)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -88,9 +88,9 @@ struct KeyboardStatsView: View {
         keyboardEntries = DatabaseManager.shared.getKeyboardEntries(date: today)
     }
 
-    private func topKeys() -> [(String, Int)] {
+    private func topKeys() -> [(id: String, name: String, count: Int)] {
         let sorted = keyboardEntries.sorted { $0.count > $1.count }
-        return Array(sorted.prefix(5)).map { (KeyCodeMapping.keyName(for: $0.keyCode), $0.count) }
+        return Array(sorted.prefix(5)).map { ($0.compositeId, KeyCodeMapping.keyName(for: $0.keyCode), $0.count) }
     }
 }
 
