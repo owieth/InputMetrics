@@ -26,7 +26,8 @@ class EventMonitor {
 
                 let response = alert.runModal()
                 if response == .alertFirstButtonReturn {
-                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                    guard let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility") else { return }
+                    NSWorkspace.shared.open(url)
                 }
             }
             return
