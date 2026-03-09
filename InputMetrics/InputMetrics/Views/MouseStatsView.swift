@@ -102,29 +102,15 @@ struct MouseStatsView: View {
     }
 
     private func loadAllTimeStats() {
-        let allSummaries = DatabaseManager.shared.getAllDailySummaries()
-
-        var totalDistance: Double = 0
-        var totalClicksLeft: Int = 0
-        var totalClicksRight: Int = 0
-        var totalClicksMiddle: Int = 0
-        var totalKeystrokes: Int = 0
-
-        for summary in allSummaries {
-            totalDistance += summary.mouseDistancePx
-            totalClicksLeft += summary.mouseClicksLeft
-            totalClicksRight += summary.mouseClicksRight
-            totalClicksMiddle += summary.mouseClicksMiddle
-            totalKeystrokes += summary.keystrokes
-        }
+        let totals = DatabaseManager.shared.getAllTimeTotals()
 
         allTimeStats = DailySummary(
             date: "",
-            mouseDistancePx: totalDistance,
-            mouseClicksLeft: totalClicksLeft,
-            mouseClicksRight: totalClicksRight,
-            mouseClicksMiddle: totalClicksMiddle,
-            keystrokes: totalKeystrokes
+            mouseDistancePx: totals.distance,
+            mouseClicksLeft: totals.clicksLeft,
+            mouseClicksRight: totals.clicksRight,
+            mouseClicksMiddle: totals.clicksMiddle,
+            keystrokes: totals.keystrokes
         )
     }
 }

@@ -284,6 +284,49 @@ final class DatabaseManager: @unchecked Sendable {
         }
     }
 
+    // MARK: - Aggregated Totals
+
+    struct AllTimeTotals {
+        var distance: Double
+        var clicksLeft: Int
+        var clicksRight: Int
+        var clicksMiddle: Int
+        var keystrokes: Int
+
+        static let zero = AllTimeTotals(distance: 0, clicksLeft: 0, clicksRight: 0, clicksMiddle: 0, keystrokes: 0)
+
+        var totalClicks: Int { clicksLeft + clicksRight + clicksMiddle }
+    }
+
+    func getAllTimeTotals() -> AllTimeTotals {
+        guard let db = dbQueue else { return .zero }
+
+        do {
+            return try db.read { db in
+                let row = try Row.fetchOne(db, sql: """
+                    SELECT
+                        COALESCE(SUM(mouse_distance_px), 0) AS distance,
+                        COALESCE(SUM(mouse_clicks_left), 0) AS clicks_left,
+                        COALESCE(SUM(mouse_clicks_right), 0) AS clicks_right,
+                        COALESCE(SUM(mouse_clicks_middle), 0) AS clicks_middle,
+                        COALESCE(SUM(keystrokes), 0) AS keystrokes
+                    FROM daily_summary
+                    """)
+                guard let row else { return .zero }
+                return AllTimeTotals(
+                    distance: row["distance"],
+                    clicksLeft: row["clicks_left"],
+                    clicksRight: row["clicks_right"],
+                    clicksMiddle: row["clicks_middle"],
+                    keystrokes: row["keystrokes"]
+                )
+            }
+        } catch {
+            print("Error fetching all-time totals: \(error)")
+            return .zero
+        }
+    }
+
     // MARK: - Fetch All (for export)
 
     func getAllDailySummaries() -> [DailySummary] {
