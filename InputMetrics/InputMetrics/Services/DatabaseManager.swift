@@ -43,8 +43,22 @@ final class DatabaseManager: @unchecked Sendable {
     private var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
 
+        #if DEBUG
+        migrator.eraseDatabaseOnSchemaChange = true
+        #endif
+
+        registerV1Migration(&migrator)
+        registerV2Migration(&migrator)
+        registerV3Migration(&migrator)
+        registerV4Migration(&migrator)
+
+        return migrator
+    }
+
+    // MARK: - Migrations
+
+    private func registerV1Migration(_ migrator: inout DatabaseMigrator) {
         migrator.registerMigration("v1") { db in
-            // Daily summary table
             try db.create(table: "daily_summary") { t in
                 t.column("date", .text).primaryKey()
                 t.column("mouse_distance_px", .double).defaults(to: 0)
@@ -53,8 +67,11 @@ final class DatabaseManager: @unchecked Sendable {
                 t.column("mouse_clicks_middle", .integer).defaults(to: 0)
                 t.column("keystrokes", .integer).defaults(to: 0)
             }
+        }
+    }
 
-            // Mouse heatmap table
+    private func registerV2Migration(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v2") { db in
             try db.create(table: "mouse_heatmap") { t in
                 t.column("date", .text)
                 t.column("screen_id", .text)
@@ -63,8 +80,11 @@ final class DatabaseManager: @unchecked Sendable {
                 t.column("click_count", .integer).defaults(to: 0)
                 t.primaryKey(["date", "screen_id", "bucket_x", "bucket_y"])
             }
+        }
+    }
 
-            // Keyboard heatmap table
+    private func registerV3Migration(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v3") { db in
             try db.create(table: "keyboard_heatmap") { t in
                 t.column("date", .text)
                 t.column("key_code", .integer)
@@ -72,10 +92,20 @@ final class DatabaseManager: @unchecked Sendable {
                 t.column("count", .integer).defaults(to: 0)
                 t.primaryKey(["date", "key_code", "modifier_flags"])
             }
-
         }
+    }
 
-        return migrator
+    private func registerV4Migration(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v4") { db in
+            try db.create(table: "hourly_summary") { t in
+                t.column("date", .text)
+                t.column("hour", .integer)
+                t.column("mouse_distance_px", .double).defaults(to: 0)
+                t.column("mouse_clicks", .integer).defaults(to: 0)
+                t.column("keystrokes", .integer).defaults(to: 0)
+                t.primaryKey(["date", "hour"])
+            }
+        }
     }
 
     // MARK: - Daily Summary Operations
