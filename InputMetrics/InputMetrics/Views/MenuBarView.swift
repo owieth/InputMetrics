@@ -16,8 +16,11 @@ struct MenuBarView: View {
     @State private var allTimeDistance: Double = 0
     @State private var allTimeClicks: Int = 0
     @State private var allTimeKeystrokes: Int = 0
+    @State private var cachedTotals: DatabaseManager.AllTimeTotals = .zero
+    @State private var lastCacheTime: Date = .distantPast
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let cacheInterval: TimeInterval = 30
 
     enum MetricTab {
         case mouse, keyboard
@@ -74,14 +77,16 @@ struct MenuBarView: View {
         .frame(width: 420, height: 600)
         .onReceive(timer) { _ in
             updateStats()
-            loadAllTimeStats()
+            refreshAllTimeTotalsIfNeeded()
+            updateAllTimeStats()
         }
         .onAppear {
             updateStats()
             loadChartData()
             loadHeatmapData()
             loadKeyboardData()
-            loadAllTimeStats()
+            refreshCachedTotals()
+            updateAllTimeStats()
         }
     }
 
@@ -403,28 +408,21 @@ struct MenuBarView: View {
         keyboardEntries = DatabaseManager.shared.getKeyboardEntries(date: today)
     }
 
-    private func loadAllTimeStats() {
-        let allSummaries = DatabaseManager.shared.getAllDailySummaries()
+    private func refreshCachedTotals() {
+        cachedTotals = DatabaseManager.shared.getAllTimeTotals()
+        lastCacheTime = Date()
+    }
 
-        var totalDistance: Double = 0
-        var totalClicks: Int = 0
-        var totalKeys: Int = 0
+    private func refreshAllTimeTotalsIfNeeded() {
+        guard Date().timeIntervalSince(lastCacheTime) >= cacheInterval else { return }
+        refreshCachedTotals()
+    }
 
-        for summary in allSummaries {
-            totalDistance += summary.mouseDistancePx
-            totalClicks += summary.mouseClicksLeft + summary.mouseClicksRight + summary.mouseClicksMiddle
-            totalKeys += summary.keystrokes
-        }
-
-        // Add current session counters (not yet persisted)
+    private func updateAllTimeStats() {
         let mouseStats = MouseTracker.shared.getCurrentStats()
-        totalDistance += mouseStats.distance
-        totalClicks += mouseStats.left + mouseStats.right + mouseStats.middle
-        totalKeys += KeyboardTracker.shared.getCurrentKeystrokes()
-
-        allTimeDistance = totalDistance
-        allTimeClicks = totalClicks
-        allTimeKeystrokes = totalKeys
+        allTimeDistance = cachedTotals.distance + mouseStats.distance
+        allTimeClicks = cachedTotals.totalClicks + mouseStats.left + mouseStats.right + mouseStats.middle
+        allTimeKeystrokes = cachedTotals.keystrokes + KeyboardTracker.shared.getCurrentKeystrokes()
     }
 
     private func chartDistance(_ pixels: Double) -> Double {
