@@ -254,7 +254,7 @@ struct MenuBarView: View {
                 if !keyboardEntries.isEmpty {
                     let topKeys = keyboardEntries.sorted { $0.count > $1.count }.prefix(5)
                     HStack(spacing: 8) {
-                        ForEach(Array(topKeys), id: \.keyCode) { entry in
+                        ForEach(Array(topKeys), id: \.compositeId) { entry in
                             VStack(spacing: 4) {
                                 Text(KeyCodeMapping.keyName(for: entry.keyCode))
                                     .font(.caption.bold())

@@ -16,6 +16,10 @@ struct KeyboardEntry: Codable, FetchableRecord, PersistableRecord {
         case count
     }
 
+    var compositeId: String {
+        "\(keyCode)-\(modifierFlags)"
+    }
+
     enum Columns {
         static let date = Column(CodingKeys.date)
         static let keyCode = Column(CodingKeys.keyCode)
