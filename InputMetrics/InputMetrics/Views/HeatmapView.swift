@@ -2,45 +2,73 @@ import SwiftUI
 
 struct HeatmapView: View {
     @State private var heatmapData: [[Int]] = []
+    @State private var screenIds: [String] = []
+    @State private var selectedScreenId: String?
 
     private var maxValue: Int {
         heatmapData.flatMap { $0 }.max() ?? 1
     }
 
     var body: some View {
-        Canvas { context, size in
-            let cellWidth = size.width / CGFloat(Constants.heatmapGridSize)
-            let cellHeight = size.height / CGFloat(Constants.heatmapGridSize)
-
-            guard !heatmapData.isEmpty else { return }
-
-            for y in 0..<Constants.heatmapGridSize {
-                for x in 0..<Constants.heatmapGridSize {
-                    let value = heatmapData[y][x]
-                    let intensity = Double(value) / Double(maxValue)
-
-                    let rect = CGRect(
-                        x: CGFloat(x) * cellWidth,
-                        y: CGFloat(y) * cellHeight,
-                        width: cellWidth,
-                        height: cellHeight
-                    )
-
-                    let color = colorForIntensity(intensity)
-                    context.fill(
-                        Path(roundedRect: rect, cornerRadius: 0),
-                        with: .color(color)
-                    )
+        VStack(spacing: 8) {
+            if !screenIds.isEmpty {
+                Picker("Screen", selection: $selectedScreenId) {
+                    Text("All Screens").tag(String?.none)
+                    ForEach(screenIds, id: \.self) { id in
+                        Text(id).tag(String?.some(id))
+                    }
+                }
+                .pickerStyle(.menu)
+                .accessibilityLabel("Screen filter")
+                .onChange(of: selectedScreenId) { _, _ in
+                    loadHeatmapData()
                 }
             }
+
+            Canvas { context, size in
+                let cellWidth = size.width / CGFloat(Constants.heatmapGridSize)
+                let cellHeight = size.height / CGFloat(Constants.heatmapGridSize)
+
+                guard !heatmapData.isEmpty else { return }
+
+                for y in 0..<Constants.heatmapGridSize {
+                    for x in 0..<Constants.heatmapGridSize {
+                        let value = heatmapData[y][x]
+                        let intensity = Double(value) / Double(maxValue)
+
+                        let rect = CGRect(
+                            x: CGFloat(x) * cellWidth,
+                            y: CGFloat(y) * cellHeight,
+                            width: cellWidth,
+                            height: cellHeight
+                        )
+
+                        let color = colorForIntensity(intensity)
+                        context.fill(
+                            Path(roundedRect: rect, cornerRadius: 0),
+                            with: .color(color)
+                        )
+                    }
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Mouse click heatmap")
+            .background(Color.black.opacity(0.1))
+            .cornerRadius(8)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Mouse click heatmap")
-        .background(Color.black.opacity(0.1))
-        .cornerRadius(8)
         .onAppear {
+            loadScreenIds()
             loadHeatmapData()
         }
+    }
+
+    private func loadScreenIds() {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        let today = formatter.string(from: Date())
+
+        screenIds = DatabaseManager.shared.getDistinctScreenIds(date: today)
     }
 
     private func loadHeatmapData() {
@@ -49,12 +77,10 @@ struct HeatmapView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         let today = formatter.string(from: Date())
 
-        let entries = DatabaseManager.shared.getMouseHeatmap(date: today)
+        let entries = DatabaseManager.shared.getMouseHeatmap(date: today, screenId: selectedScreenId)
 
-        // Initialize 50x50 grid with zeros
         var grid = Array(repeating: Array(repeating: 0, count: Constants.heatmapGridSize), count: Constants.heatmapGridSize)
 
-        // Fill in the click counts
         for entry in entries {
             guard entry.bucketX >= 0 && entry.bucketY >= 0 && entry.bucketX < Constants.heatmapGridSize && entry.bucketY < Constants.heatmapGridSize else { continue }
             grid[entry.bucketY][entry.bucketX] += entry.clickCount
