@@ -78,10 +78,6 @@ final class DatabaseManager: @unchecked Sendable {
                 t.column("keystrokes", .integer).defaults(to: 0)
                 t.primaryKey(["date", "hour"])
             }
-
-            // Create indexes
-            try db.create(index: "idx_daily_date", on: "daily_summary", columns: ["date"])
-            try db.create(index: "idx_hourly_date", on: "hourly_summary", columns: ["date"])
         }
 
         return migrator
