@@ -7,6 +7,7 @@ enum ChartMetric {
 }
 
 struct ChartView: View {
+    @ObservedObject private var preferences = UserPreferences.shared
     let data: [DailySummary]
     let range: TimeRange
     var metric: ChartMetric = .distance
@@ -51,7 +52,7 @@ struct ChartView: View {
     private var yAxisLabel: String {
         switch metric {
         case .distance:
-            return "Distance (km)"
+            return preferences.distanceUnit == .metric ? "Distance (km)" : "Distance (mi)"
         case .keystrokes:
             return "Keystrokes"
         }
@@ -71,7 +72,12 @@ struct ChartView: View {
     private func metricValue(for item: DailySummary) -> Double {
         switch metric {
         case .distance:
-            return DistanceConverter.metersToKilometers(DistanceConverter.pixelsToMeters(item.mouseDistancePx))
+            let meters = DistanceConverter.pixelsToMeters(item.mouseDistancePx)
+            if preferences.distanceUnit == .metric {
+                return DistanceConverter.metersToKilometers(meters)
+            } else {
+                return DistanceConverter.feetToMiles(DistanceConverter.metersToFeet(meters))
+            }
         case .keystrokes:
             return Double(item.keystrokes)
         }

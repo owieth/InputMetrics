@@ -153,12 +153,12 @@ struct MenuBarView: View {
                     Chart(chartData.suffix(7), id: \.date) { item in
                         BarMark(
                             x: .value("Day", shortDay(from: item.date)),
-                            y: .value("Distance", DistanceConverter.pixelsToMeters(item.mouseDistancePx) * 3.28084)
+                            y: .value("Distance", chartDistance(item.mouseDistancePx))
                         )
                         .foregroundStyle(.blue.gradient)
                     }
                     .frame(height: 150)
-                    .chartYAxisLabel("ft")
+                    .chartYAxisLabel(preferences.distanceUnit == .metric ? "km" : "mi")
                     .padding(.horizontal)
                 } else {
                     Text("No data yet")
@@ -424,6 +424,16 @@ struct MenuBarView: View {
         allTimeDistance = totalDistance
         allTimeClicks = totalClicks
         allTimeKeystrokes = totalKeys
+    }
+
+    private func chartDistance(_ pixels: Double) -> Double {
+        let meters = DistanceConverter.pixelsToMeters(pixels)
+        if preferences.distanceUnit == .metric {
+            return DistanceConverter.metersToKilometers(meters)
+        } else {
+            let feet = DistanceConverter.metersToFeet(meters)
+            return DistanceConverter.feetToMiles(feet)
+        }
     }
 
     private func shortDay(from dateString: String) -> String {

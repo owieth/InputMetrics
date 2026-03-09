@@ -139,11 +139,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         button.title = " \(distanceText) · \(keystrokesText)"
     }
 
-    private func formatDistance(_ meters: Double) -> String {
-        if meters >= 1000 {
-            return String(format: "%.1fkm", meters / 1000)
+    @MainActor private func formatDistance(_ meters: Double) -> String {
+        if UserPreferences.shared.distanceUnit == .imperial {
+            let feet = meters / Constants.metersPerFoot
+            if feet >= Constants.feetPerMile {
+                return String(format: "%.1fmi", feet / Constants.feetPerMile)
+            } else {
+                return String(format: "%.0fft", feet)
+            }
         } else {
-            return String(format: "%.0fm", meters)
+            if meters >= 1000 {
+                return String(format: "%.1fkm", meters / 1000)
+            } else {
+                return String(format: "%.0fm", meters)
+            }
         }
     }
 
