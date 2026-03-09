@@ -127,28 +127,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let keyboardStats = KeyboardTracker.shared.getCurrentKeystrokes()
 
         let today = DateHelper.todayString()
+        let summary = DatabaseManager.shared.getDailySummary(date: today)
 
-        Task.detached { [weak self] in
-            let summary = DatabaseManager.shared.getDailySummary(date: today)
+        var totalDistance = mouseStats.distance
+        var totalKeystrokes = keyboardStats
 
-            await MainActor.run {
-                guard let self else { return }
-
-                var totalDistance = mouseStats.distance
-                var totalKeystrokes = keyboardStats
-
-                if let summary {
-                    totalDistance += summary.mouseDistancePx
-                    totalKeystrokes += summary.keystrokes
-                }
-
-                let distanceMeters = totalDistance / 4330.0
-                let distanceText = self.formatDistance(distanceMeters)
-                let keystrokesText = self.formatCount(totalKeystrokes)
-
-                button.title = " \(distanceText) · \(keystrokesText)"
-            }
+        if let summary {
+            totalDistance += summary.mouseDistancePx
+            totalKeystrokes += summary.keystrokes
         }
+
+        let distanceMeters = totalDistance / 4330.0
+        let distanceText = formatDistance(distanceMeters)
+        let keystrokesText = formatCount(totalKeystrokes)
+
+        button.title = " \(distanceText) · \(keystrokesText)"
     }
 
     private func formatDistance(_ meters: Double) -> String {
