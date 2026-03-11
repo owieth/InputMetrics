@@ -37,6 +37,31 @@ final class MouseStatsViewModel {
         let endString = formatter.string(from: today)
 
         chartData = DatabaseManager.shared.getDailySummaries(from: startString, to: endString)
+
+        let todayStr = formatter.string(from: today)
+        let mouseStats = MouseTracker.shared.getCurrentStats()
+        let keyboardStats = KeyboardTracker.shared.getCurrentKeystrokes()
+
+        if let idx = chartData.firstIndex(where: { $0.date == todayStr }) {
+            chartData[idx].mouseDistancePx += mouseStats.distance
+            chartData[idx].keystrokes += keyboardStats
+            chartData[idx].mouseClicksLeft += mouseStats.left
+            chartData[idx].mouseClicksRight += mouseStats.right
+            chartData[idx].mouseClicksMiddle += mouseStats.middle
+            chartData[idx].scrollDistanceVertical += mouseStats.scrollV
+            chartData[idx].scrollDistanceHorizontal += mouseStats.scrollH
+        } else {
+            chartData.append(DailySummary(
+                date: todayStr,
+                mouseDistancePx: mouseStats.distance,
+                mouseClicksLeft: mouseStats.left,
+                mouseClicksRight: mouseStats.right,
+                mouseClicksMiddle: mouseStats.middle,
+                keystrokes: keyboardStats,
+                scrollDistanceVertical: mouseStats.scrollV,
+                scrollDistanceHorizontal: mouseStats.scrollH
+            ))
+        }
     }
 
     func loadAllTimeStats() {
