@@ -5,6 +5,8 @@ import Charts
 struct MenuBarView: View {
     @ObservedObject private var preferences = UserPreferences.shared
     @State private var viewModel = MenuBarViewModel()
+    @State private var hoveredMouseLabel: String?
+    @State private var hoveredKeyboardLabel: String?
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -141,29 +143,65 @@ struct MenuBarView: View {
 
                 if !viewModel.chartData.isEmpty {
                     Chart(viewModel.chartData.suffix(7), id: \.date) { item in
+                        let label = viewModel.shortDay(from: item.date)
+                        let distance = viewModel.chartDistance(item.mouseDistancePx, unit: preferences.distanceUnit)
+
                         LineMark(
-                            x: .value("Day", viewModel.shortDay(from: item.date)),
-                            y: .value("Distance", viewModel.chartDistance(item.mouseDistancePx, unit: preferences.distanceUnit))
+                            x: .value("Day", label),
+                            y: .value("Distance", distance)
                         )
                         .foregroundStyle(.blue)
                         .interpolationMethod(.catmullRom)
 
                         AreaMark(
-                            x: .value("Day", viewModel.shortDay(from: item.date)),
-                            y: .value("Distance", viewModel.chartDistance(item.mouseDistancePx, unit: preferences.distanceUnit))
+                            x: .value("Day", label),
+                            y: .value("Distance", distance)
                         )
                         .foregroundStyle(.blue.opacity(0.1))
                         .interpolationMethod(.catmullRom)
 
                         PointMark(
-                            x: .value("Day", viewModel.shortDay(from: item.date)),
-                            y: .value("Distance", viewModel.chartDistance(item.mouseDistancePx, unit: preferences.distanceUnit))
+                            x: .value("Day", label),
+                            y: .value("Distance", distance)
                         )
                         .foregroundStyle(.blue)
                         .symbolSize(30)
+
+                        if hoveredMouseLabel == label {
+                            RuleMark(x: .value("Day", label))
+                                .foregroundStyle(Color.secondary.opacity(0.3))
+                                .annotation(position: .top, spacing: 4) {
+                                    let unit = preferences.distanceUnit == .metric ? "km" : "mi"
+                                    Text(String(format: "%.2f %@", distance, unit))
+                                        .font(.caption)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color(nsColor: .controlBackgroundColor))
+                                        .cornerRadius(4)
+                                }
+                        }
                     }
                     .frame(height: 150)
                     .chartYAxisLabel(preferences.distanceUnit == .metric ? "km" : "mi")
+                    .chartOverlay { proxy in
+                        GeometryReader { geometry in
+                            Rectangle()
+                                .fill(.clear)
+                                .contentShape(Rectangle())
+                                .onContinuousHover { phase in
+                                    switch phase {
+                                    case .active(let location):
+                                        let origin = geometry[proxy.plotFrame!].origin
+                                        let x = location.x - origin.x
+                                        if let label: String = proxy.value(atX: x) {
+                                            hoveredMouseLabel = label
+                                        }
+                                    case .ended:
+                                        hoveredMouseLabel = nil
+                                    }
+                                }
+                        }
+                    }
                     .padding(.horizontal)
                 } else {
                     Text("No data yet")
@@ -219,28 +257,63 @@ struct MenuBarView: View {
 
                 if !viewModel.chartData.isEmpty {
                     Chart(viewModel.chartData.suffix(7), id: \.date) { item in
+                        let label = viewModel.shortDay(from: item.date)
+                        let count = item.keystrokes
+
                         LineMark(
-                            x: .value("Day", viewModel.shortDay(from: item.date)),
-                            y: .value("Keystrokes", item.keystrokes)
+                            x: .value("Day", label),
+                            y: .value("Keystrokes", count)
                         )
                         .foregroundStyle(.purple)
                         .interpolationMethod(.catmullRom)
 
                         AreaMark(
-                            x: .value("Day", viewModel.shortDay(from: item.date)),
-                            y: .value("Keystrokes", item.keystrokes)
+                            x: .value("Day", label),
+                            y: .value("Keystrokes", count)
                         )
                         .foregroundStyle(.purple.opacity(0.1))
                         .interpolationMethod(.catmullRom)
 
                         PointMark(
-                            x: .value("Day", viewModel.shortDay(from: item.date)),
-                            y: .value("Keystrokes", item.keystrokes)
+                            x: .value("Day", label),
+                            y: .value("Keystrokes", count)
                         )
                         .foregroundStyle(.purple)
                         .symbolSize(30)
+
+                        if hoveredKeyboardLabel == label {
+                            RuleMark(x: .value("Day", label))
+                                .foregroundStyle(Color.secondary.opacity(0.3))
+                                .annotation(position: .top, spacing: 4) {
+                                    Text("\(count)")
+                                        .font(.caption)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color(nsColor: .controlBackgroundColor))
+                                        .cornerRadius(4)
+                                }
+                        }
                     }
                     .frame(height: 150)
+                    .chartOverlay { proxy in
+                        GeometryReader { geometry in
+                            Rectangle()
+                                .fill(.clear)
+                                .contentShape(Rectangle())
+                                .onContinuousHover { phase in
+                                    switch phase {
+                                    case .active(let location):
+                                        let origin = geometry[proxy.plotFrame!].origin
+                                        let x = location.x - origin.x
+                                        if let label: String = proxy.value(atX: x) {
+                                            hoveredKeyboardLabel = label
+                                        }
+                                    case .ended:
+                                        hoveredKeyboardLabel = nil
+                                    }
+                                }
+                        }
+                    }
                     .padding(.horizontal)
                 } else {
                     Text("No data yet")
