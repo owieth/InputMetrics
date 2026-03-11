@@ -71,5 +71,8 @@ fastlane/test_output
 # Build output
 build/
 
+# Claude Code
+.claude/worktrees/
+
 # Data
 .DS_Store
