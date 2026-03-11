@@ -68,5 +68,8 @@ fastlane/test_output
 .env.test.local
 .env.production.local
 
+# Build output
+build/
+
 # Data
 .DS_Store
