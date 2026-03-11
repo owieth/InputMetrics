@@ -12,6 +12,8 @@ struct ChartView: View {
     let range: TimeRange
     var metric: ChartMetric = .distance
 
+    @State private var hoveredLabel: String?
+
     var body: some View {
         VStack(alignment: .leading) {
             Text(chartTitle)
@@ -24,28 +26,63 @@ struct ChartView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Chart(data, id: \.date) { item in
+                    let label = formatLabel(from: item.date)
+                    let value = metricValue(for: item)
+
                     LineMark(
-                        x: .value("Date", formatLabel(from: item.date)),
-                        y: .value("Value", metricValue(for: item))
+                        x: .value("Date", label),
+                        y: .value("Value", value)
                     )
                     .foregroundStyle(Color.blue)
                     .interpolationMethod(.catmullRom)
 
                     AreaMark(
-                        x: .value("Date", formatLabel(from: item.date)),
-                        y: .value("Value", metricValue(for: item))
+                        x: .value("Date", label),
+                        y: .value("Value", value)
                     )
                     .foregroundStyle(Color.blue.opacity(0.1))
                     .interpolationMethod(.catmullRom)
 
                     PointMark(
-                        x: .value("Date", formatLabel(from: item.date)),
-                        y: .value("Value", metricValue(for: item))
+                        x: .value("Date", label),
+                        y: .value("Value", value)
                     )
                     .foregroundStyle(Color.blue)
                     .symbolSize(30)
+
+                    if hoveredLabel == label {
+                        RuleMark(x: .value("Date", label))
+                            .foregroundStyle(Color.secondary.opacity(0.3))
+                            .annotation(position: .top, spacing: 4) {
+                                Text(formattedTooltip(value: value))
+                                    .font(.caption)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color(nsColor: .controlBackgroundColor))
+                                    .cornerRadius(4)
+                            }
+                    }
                 }
                 .chartYAxisLabel(yAxisLabel)
+                .chartOverlay { proxy in
+                    GeometryReader { geometry in
+                        Rectangle()
+                            .fill(.clear)
+                            .contentShape(Rectangle())
+                            .onContinuousHover { phase in
+                                switch phase {
+                                case .active(let location):
+                                    let origin = geometry[proxy.plotFrame!].origin
+                                    let x = location.x - origin.x
+                                    if let label: String = proxy.value(atX: x) {
+                                        hoveredLabel = label
+                                    }
+                                case .ended:
+                                    hoveredLabel = nil
+                                }
+                            }
+                    }
+                }
             }
         }
     }
@@ -84,6 +121,16 @@ struct ChartView: View {
             display.dateFormat = "MMM d"
         }
         return display.string(from: date)
+    }
+
+    private func formattedTooltip(value: Double) -> String {
+        switch metric {
+        case .distance:
+            let unit = preferences.distanceUnit == .metric ? "km" : "mi"
+            return String(format: "%.2f %@", value, unit)
+        case .keystrokes:
+            return "\(Int(value))"
+        }
     }
 
     private func metricValue(for item: DailySummary) -> Double {
