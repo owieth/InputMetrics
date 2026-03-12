@@ -20,6 +20,9 @@ class MouseTracker {
 
     private var lastPoint: CGPoint?
     private var accumulatedDistance: Double = 0
+    private var peakMouseSpeed: Double = 0
+    private var speedSamples: [Double] = []
+    private var lastMovementTime: Date?
     private var leftClicks: Int = 0
     private var rightClicks: Int = 0
     private var middleClicks: Int = 0
@@ -99,8 +102,11 @@ class MouseTracker {
     }
 
     func trackMovement(to point: CGPoint) {
+        let now = Date()
+
         guard let last = lastPoint else {
             lastPoint = point
+            lastMovementTime = now
             return
         }
 
@@ -109,7 +115,18 @@ class MouseTracker {
         let distance = sqrt(dx * dx + dy * dy)
 
         accumulatedDistance += distance
+
+        if let lastTime = lastMovementTime {
+            let elapsed = now.timeIntervalSince(lastTime)
+            if elapsed > 0 && elapsed < 1.0 {
+                let speed = distance / elapsed
+                speedSamples.append(speed)
+                peakMouseSpeed = max(peakMouseSpeed, speed)
+            }
+        }
+
         lastPoint = point
+        lastMovementTime = now
     }
 
     func trackClick(type: ClickType, at point: CGPoint) {
@@ -148,6 +165,7 @@ class MouseTracker {
         let currentHour = getCurrentHour()
         let activityTimes = EventMonitor.shared.getActivityTimes()
         let activeMinutes = Int(EventMonitor.shared.getAndResetActiveSeconds() / 60)
+        let avgSpeed = speedSamples.isEmpty ? 0 : speedSamples.reduce(0, +) / Double(speedSamples.count)
 
         DatabaseManager.shared.updateDailySummary(
             date: today,
@@ -159,7 +177,9 @@ class MouseTracker {
             scrollHorizontal: scrollHorizontal,
             firstActiveAt: activityTimes.first,
             lastActiveAt: activityTimes.last,
-            activeMinutes: activeMinutes
+            activeMinutes: activeMinutes,
+            avgMouseSpeed: avgSpeed,
+            peakMouseSpeed: peakMouseSpeed
         )
 
         DatabaseManager.shared.updateHourlySummary(
@@ -189,6 +209,8 @@ class MouseTracker {
         scrollVertical = 0
         scrollHorizontal = 0
         heatmapBuffer.removeAll()
+        speedSamples.removeAll()
+        peakMouseSpeed = 0
 
         AppLogger.mouse.debug("Persisted: \(persistedDistance)px, L:\(persistedLeft) R:\(persistedRight) M:\(persistedMiddle) SV:\(persistedScrollV) SH:\(persistedScrollH), heatmap buckets:\(persistedHeatmapBuckets)")
     }
@@ -201,7 +223,10 @@ class MouseTracker {
         scrollVertical = 0
         scrollHorizontal = 0
         lastPoint = nil
+        lastMovementTime = nil
         heatmapBuffer.removeAll()
+        speedSamples.removeAll()
+        peakMouseSpeed = 0
     }
 
     func getCurrentStats() -> (distance: Double, left: Int, right: Int, middle: Int, scrollV: Double, scrollH: Double) {
