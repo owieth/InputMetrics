@@ -18,6 +18,9 @@ final class MenuBarViewModel {
     var heatmapData: [[Int]] = []
     var keyboardEntries: [KeyboardEntry] = []
     var hourlySummaries: [HourlySummary] = []
+    var currentStreak: Int = 0
+    var keystrokeProgress: Double = 0
+    var distanceProgress: Double = 0
     var scrollVertical: Double = 0
     var scrollHorizontal: Double = 0
     var allTimeDistance: Double = 0
@@ -77,6 +80,45 @@ final class MenuBarViewModel {
             firstActiveAt = liveActivity.first
             lastActiveAt = liveActivity.last
         }
+
+        calculateGoalProgress()
+    }
+
+    func calculateGoalProgress() {
+        let config = UserPreferences.shared.goalConfig
+        guard config.enabled else { return }
+
+        keystrokeProgress = min(1.0, Double(keystrokes) / Double(config.keystrokesDaily))
+        distanceProgress = min(1.0, mouseDistance / config.distanceDaily)
+
+        calculateStreak(config: config)
+    }
+
+    private func calculateStreak(config: GoalConfig) {
+        let calendar = Calendar.current
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        var streak = 0
+        var checkDate = calendar.date(byAdding: .day, value: -1, to: Date())!
+
+        for _ in 0..<365 {
+            let dateStr = formatter.string(from: checkDate)
+            guard let summary = DatabaseManager.shared.getDailySummary(date: dateStr) else { break }
+
+            let keystrokesHit = summary.keystrokes >= config.keystrokesDaily
+            let distanceHit = summary.mouseDistancePx >= config.distanceDaily
+
+            if keystrokesHit || distanceHit {
+                streak += 1
+            } else {
+                break
+            }
+            checkDate = calendar.date(byAdding: .day, value: -1, to: checkDate)!
+        }
+
+        currentStreak = streak
     }
 
     func refreshCachedTotals() {
