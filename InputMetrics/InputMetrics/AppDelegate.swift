@@ -27,7 +27,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "chart.bar.fill", accessibilityDescription: "InputMetrics")
+            let appIcon = NSImage(named: "AppIcon")
+            appIcon?.size = NSSize(width: 18, height: 18)
+            button.image = appIcon
             button.imagePosition = .imageLeading
             button.action = #selector(statusItemClicked)
             button.target = self
@@ -120,6 +122,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusItem?.button else { return }
         guard UserPreferences.shared.showLiveStats else {
             button.title = ""
+            button.subviews.forEach { $0.removeFromSuperview() }
+            let appIcon = NSImage(named: "AppIcon")
+            appIcon?.size = NSSize(width: 18, height: 18)
+            button.image = appIcon
+            statusItem?.length = NSStatusItem.variableLength
             return
         }
 
@@ -141,7 +148,59 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let distanceText = formatDistance(distanceMeters)
         let keystrokesText = formatCount(totalKeystrokes)
 
-        button.title = " \(distanceText) · \(keystrokesText)"
+        button.title = ""
+        button.image = nil
+        configureStatusButton(button, distanceText: distanceText, keystrokesText: keystrokesText)
+    }
+
+    private func configureStatusButton(_ button: NSStatusBarButton, distanceText: String, keystrokesText: String) {
+        button.subviews.forEach { $0.removeFromSuperview() }
+
+        let container = NSStackView()
+        container.orientation = .horizontal
+        container.spacing = 2
+        container.alignment = .centerY
+        container.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+
+        let iconView = NSImageView()
+        iconView.image = NSImage(named: "AppIcon")
+        iconView.imageScaling = .scaleProportionallyDown
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            iconView.widthAnchor.constraint(equalToConstant: 18),
+            iconView.heightAnchor.constraint(equalToConstant: 18)
+        ])
+
+        let statsStack = NSStackView()
+        statsStack.orientation = .vertical
+        statsStack.spacing = 0
+        statsStack.alignment = .leading
+
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .medium)
+
+        let distanceLabel = NSTextField(labelWithString: distanceText)
+        distanceLabel.font = font
+        distanceLabel.textColor = .labelColor
+
+        let keystrokesLabel = NSTextField(labelWithString: keystrokesText)
+        keystrokesLabel.font = font
+        keystrokesLabel.textColor = .labelColor
+
+        statsStack.addArrangedSubview(distanceLabel)
+        statsStack.addArrangedSubview(keystrokesLabel)
+
+        container.addArrangedSubview(iconView)
+        container.addArrangedSubview(statsStack)
+
+        container.translatesAutoresizingMaskIntoConstraints = false
+        button.addSubview(container)
+        NSLayoutConstraint.activate([
+            container.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+            container.centerYAnchor.constraint(equalTo: button.centerYAnchor)
+        ])
+
+        let fittingSize = container.fittingSize
+        statusItem?.length = fittingSize.width + 4
     }
 
     private func formatDistance(_ meters: Double) -> String {
