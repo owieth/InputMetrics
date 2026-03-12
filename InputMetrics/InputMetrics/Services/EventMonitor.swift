@@ -6,33 +6,46 @@ class EventMonitor {
     static let shared = EventMonitor()
 
     private var eventTap: CFMachPort?
+    private var retryTimer: Timer?
+    private var retryCount = 0
+    private let maxRetries = 30
 
     private init() {}
 
     func start() {
-        guard checkAccessibilityPermission() else {
-            print("⚠️ Accessibility permission not granted")
-            print("📋 Please enable InputMetrics in System Settings > Privacy & Security > Accessibility")
-            requestAccessibilityPermission()
+        if createAndStartEventTap() { return }
 
-            // Show alert to user
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "Accessibility Permission Required"
-                alert.informativeText = "InputMetrics needs Accessibility permission to track mouse and keyboard events.\n\n1. Open System Settings\n2. Go to Privacy & Security > Accessibility\n3. Enable InputMetrics\n4. Restart the app"
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Open System Settings")
-                alert.addButton(withTitle: "OK")
+        print("⚠️ Event tap creation failed — accessibility permission likely not granted")
+        print("📋 Please enable InputMetrics in System Settings > Privacy & Security > Accessibility")
 
-                let response = alert.runModal()
-                if response == .alertFirstButtonReturn {
-                    guard let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility") else { return }
-                    NSWorkspace.shared.open(url)
-                }
+        let alert = NSAlert()
+        alert.messageText = "Accessibility Permission Required"
+        alert.informativeText = "InputMetrics needs Accessibility permission to track mouse and keyboard events.\n\n1. Open System Settings\n2. Go to Privacy & Security > Accessibility\n3. Enable InputMetrics\n\nThe app will start automatically once permission is granted."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "OK")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            if let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility") {
+                NSWorkspace.shared.open(url)
             }
-            return
         }
 
+        startRetryTimer()
+    }
+
+    func stop() {
+        retryTimer?.invalidate()
+        retryTimer = nil
+        guard let eventTap = eventTap else { return }
+        CGEvent.tapEnable(tap: eventTap, enable: false)
+        CFMachPortInvalidate(eventTap)
+        self.eventTap = nil
+        print("Event monitoring stopped")
+    }
+
+    private func createAndStartEventTap() -> Bool {
         let eventMask = (1 << CGEventType.mouseMoved.rawValue) |
                        (1 << CGEventType.leftMouseDown.rawValue) |
                        (1 << CGEventType.rightMouseDown.rawValue) |
@@ -40,15 +53,15 @@ class EventMonitor {
                        (1 << CGEventType.keyDown.rawValue) |
                        (1 << CGEventType.scrollWheel.rawValue)
 
-        guard let eventTap = CGEvent.tapCreate(
+        guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
             options: .listenOnly,
             eventsOfInterest: CGEventMask(eventMask),
             callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
                 if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                    if let tap = EventMonitor.shared.eventTap {
-                        CGEvent.tapEnable(tap: tap, enable: true)
+                    if let activeTap = EventMonitor.shared.eventTap {
+                        CGEvent.tapEnable(tap: activeTap, enable: true)
                     }
                     return Unmanaged.passUnretained(event)
                 }
@@ -57,40 +70,43 @@ class EventMonitor {
             },
             userInfo: nil
         ) else {
-            print("Failed to create event tap")
-            return
+            return false
         }
 
-        self.eventTap = eventTap
-
-        let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
+        self.eventTap = tap
+        let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
-        CGEvent.tapEnable(tap: eventTap, enable: true)
-
+        CGEvent.tapEnable(tap: tap, enable: true)
         print("Event monitoring started")
+        return true
     }
 
-    func stop() {
-        guard let eventTap = eventTap else { return }
-        CGEvent.tapEnable(tap: eventTap, enable: false)
-        CFMachPortInvalidate(eventTap)
-        self.eventTap = nil
-        print("Event monitoring stopped")
+    private func startRetryTimer() {
+        retryCount = 0
+        retryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+            guard let self else { timer.invalidate(); return }
+            MainActor.assumeIsolated {
+                self.retryCount += 1
+                if self.createAndStartEventTap() {
+                    print("Event monitoring started after permission grant")
+                    timer.invalidate()
+                    self.retryTimer = nil
+                } else if self.retryCount >= self.maxRetries {
+                    print("⚠️ Permission not granted after \(self.maxRetries) retries — please restart the app")
+                    timer.invalidate()
+                    self.retryTimer = nil
+                }
+            }
+        }
     }
 
     nonisolated private func handleEvent(type: CGEventType, event: CGEvent) {
-        // Extract all values synchronously before the callback returns,
-        // since the CGEvent may be deallocated after the callback exits.
         let location = event.location
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         let flags = event.flags
         let scrollDeltaY = event.getDoubleValueField(.scrollWheelEventPointDeltaAxis1)
         let scrollDeltaX = event.getDoubleValueField(.scrollWheelEventPointDeltaAxis2)
 
-        // The event tap callback runs on the main thread's run loop, so we
-        // can dispatch synchronously via assumeIsolated instead of spawning
-        // a Task per event. This eliminates Task object overhead at high
-        // event rates and guarantees FIFO processing order.
         MainActor.assumeIsolated {
             switch type {
             case .mouseMoved:
@@ -115,17 +131,5 @@ class EventMonitor {
                 break
             }
         }
-    }
-
-    nonisolated private func checkAccessibilityPermission() -> Bool {
-        let optionKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        let options: NSDictionary = [optionKey: false]
-        return AXIsProcessTrustedWithOptions(options)
-    }
-
-    nonisolated private func requestAccessibilityPermission() {
-        let optionKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        let options: NSDictionary = [optionKey: true]
-        AXIsProcessTrustedWithOptions(options)
     }
 }
