@@ -56,6 +56,7 @@ final class DatabaseManager: @unchecked Sendable {
         registerV6Migration(&migrator)
         registerV7Migration(&migrator)
         registerV8Migration(&migrator)
+        registerV9Migration(&migrator)
 
         return migrator
     }
@@ -153,6 +154,16 @@ final class DatabaseManager: @unchecked Sendable {
         }
     }
 
+    private func registerV9Migration(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v9") { db in
+            try db.alter(table: "daily_summary") { t in
+                t.add(column: "avg_mouse_speed", .double).defaults(to: 0)
+                t.add(column: "peak_mouse_speed", .double).defaults(to: 0)
+                t.add(column: "peak_wpm", .double).defaults(to: 0)
+            }
+        }
+    }
+
     // MARK: - Daily Summary Operations
 
     func updateDailySummary(
@@ -166,7 +177,10 @@ final class DatabaseManager: @unchecked Sendable {
         scrollHorizontal: Double = 0,
         firstActiveAt: String? = nil,
         lastActiveAt: String? = nil,
-        activeMinutes: Int = 0
+        activeMinutes: Int = 0,
+        avgMouseSpeed: Double = 0,
+        peakMouseSpeed: Double = 0,
+        peakWPM: Double = 0
     ) {
         guard let db = dbQueue else { return }
 
@@ -175,8 +189,8 @@ final class DatabaseManager: @unchecked Sendable {
                 try db.write { db in
                     try db.execute(
                         sql: """
-                            INSERT INTO daily_summary (date, mouse_distance_px, mouse_clicks_left, mouse_clicks_right, mouse_clicks_middle, keystrokes, scroll_distance_vertical, scroll_distance_horizontal, first_active_at, last_active_at, active_minutes)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO daily_summary (date, mouse_distance_px, mouse_clicks_left, mouse_clicks_right, mouse_clicks_middle, keystrokes, scroll_distance_vertical, scroll_distance_horizontal, first_active_at, last_active_at, active_minutes, avg_mouse_speed, peak_mouse_speed, peak_wpm)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             ON CONFLICT(date) DO UPDATE SET
                                 mouse_distance_px = mouse_distance_px + excluded.mouse_distance_px,
                                 mouse_clicks_left = mouse_clicks_left + excluded.mouse_clicks_left,
@@ -187,9 +201,12 @@ final class DatabaseManager: @unchecked Sendable {
                                 scroll_distance_horizontal = scroll_distance_horizontal + excluded.scroll_distance_horizontal,
                                 first_active_at = COALESCE(daily_summary.first_active_at, excluded.first_active_at),
                                 last_active_at = COALESCE(excluded.last_active_at, daily_summary.last_active_at),
-                                active_minutes = active_minutes + excluded.active_minutes
+                                active_minutes = active_minutes + excluded.active_minutes,
+                                avg_mouse_speed = CASE WHEN excluded.avg_mouse_speed > 0 THEN excluded.avg_mouse_speed ELSE daily_summary.avg_mouse_speed END,
+                                peak_mouse_speed = MAX(daily_summary.peak_mouse_speed, excluded.peak_mouse_speed),
+                                peak_wpm = MAX(daily_summary.peak_wpm, excluded.peak_wpm)
                             """,
-                        arguments: [date, mouseDistance, leftClicks, rightClicks, middleClicks, keystrokes, scrollVertical, scrollHorizontal, firstActiveAt, lastActiveAt, activeMinutes]
+                        arguments: [date, mouseDistance, leftClicks, rightClicks, middleClicks, keystrokes, scrollVertical, scrollHorizontal, firstActiveAt, lastActiveAt, activeMinutes, avgMouseSpeed, peakMouseSpeed, peakWPM]
                     )
                 }
             } catch {
