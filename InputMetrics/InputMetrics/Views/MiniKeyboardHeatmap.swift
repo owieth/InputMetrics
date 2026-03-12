@@ -15,19 +15,22 @@ struct MiniKeyboardHeatmap: View {
         keyCountMap.values.max() ?? 1
     }
 
-    // QWERTZ layout with key codes
-    private let keyboardLayout: [[(keyCode: Int, label: String, width: CGFloat)]] = [
-        // Number row
-        [(50, "^", 1), (18, "1", 1), (19, "2", 1), (20, "3", 1), (21, "4", 1), (23, "5", 1), (22, "6", 1), (26, "7", 1), (28, "8", 1), (25, "9", 1), (29, "0", 1), (27, "ß", 1), (24, "´", 1)],
-        // QWERTZ row
-        [(12, "Q", 1), (13, "W", 1), (14, "E", 1), (15, "R", 1), (17, "T", 1), (16, "Z", 1), (32, "U", 1), (34, "I", 1), (31, "O", 1), (35, "P", 1), (33, "Ü", 1), (30, "+", 1)],
-        // ASDF row
-        [(0, "A", 1), (1, "S", 1), (2, "D", 1), (3, "F", 1), (5, "G", 1), (4, "H", 1), (38, "J", 1), (40, "K", 1), (37, "L", 1), (41, "Ö", 1), (39, "Ä", 1), (42, "#", 1)],
-        // YXCV row
-        [(6, "Y", 1), (7, "X", 1), (8, "C", 1), (9, "V", 1), (11, "B", 1), (45, "N", 1), (46, "M", 1), (43, ",", 1), (47, ".", 1), (44, "-", 1)],
-        // Space row
-        [(49, "Space", 6)]
-    ]
+    private var keyboardLayout: [[(keyCode: Int, label: String, width: CGFloat)]] {
+        let layout = KeyCodeMapping.detectCurrentLayout()
+        let label = { (keyCode: Int) in KeyCodeMapping.keyName(for: keyCode, layout: layout) }
+        return [
+            // Number row
+            [(50, label(50), 1), (18, label(18), 1), (19, label(19), 1), (20, label(20), 1), (21, label(21), 1), (23, label(23), 1), (22, label(22), 1), (26, label(26), 1), (28, label(28), 1), (25, label(25), 1), (29, label(29), 1), (27, label(27), 1), (24, label(24), 1)],
+            // Top letter row
+            [(12, label(12), 1), (13, label(13), 1), (14, label(14), 1), (15, label(15), 1), (17, label(17), 1), (16, label(16), 1), (32, label(32), 1), (34, label(34), 1), (31, label(31), 1), (35, label(35), 1), (33, label(33), 1), (30, label(30), 1)],
+            // Middle letter row
+            [(0, label(0), 1), (1, label(1), 1), (2, label(2), 1), (3, label(3), 1), (5, label(5), 1), (4, label(4), 1), (38, label(38), 1), (40, label(40), 1), (37, label(37), 1), (41, label(41), 1), (39, label(39), 1), (42, label(42), 1)],
+            // Bottom letter row
+            [(6, label(6), 1), (7, label(7), 1), (8, label(8), 1), (9, label(9), 1), (11, label(11), 1), (45, label(45), 1), (46, label(46), 1), (43, label(43), 1), (47, label(47), 1), (44, label(44), 1)],
+            // Space row
+            [(49, label(49), 6)]
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 2) {

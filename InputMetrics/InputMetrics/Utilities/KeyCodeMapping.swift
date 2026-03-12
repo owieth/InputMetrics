@@ -1,7 +1,29 @@
 import Foundation
 import Carbon.HIToolbox
 
+enum KeyboardLayout: String {
+    case qwertz, qwerty, azerty, unknown
+}
+
 struct KeyCodeMapping {
+    static func detectCurrentLayout() -> KeyboardLayout {
+        guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue(),
+              let layoutIDPtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID),
+              let layoutID = Unmanaged<CFString>.fromOpaque(layoutIDPtr).takeUnretainedValue() as String?
+        else {
+            return .qwertz
+        }
+
+        let id = layoutID.lowercased()
+        if id.contains("azerty") || id.contains("french") {
+            return .azerty
+        } else if id.contains("qwertz") || id.contains("german") || id.contains("swiss") {
+            return .qwertz
+        } else {
+            return .qwerty
+        }
+    }
+
     static func keyName(for keyCode: Int) -> String {
         // QWERTZ keyboard layout mapping
         switch keyCode {

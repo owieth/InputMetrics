@@ -3,10 +3,18 @@ import SwiftUI
 struct KeyboardHeatmapView: View {
     let entries: [KeyboardEntry]
 
+    private var detectedLayout: KeyboardLayout {
+        KeyCodeMapping.detectCurrentLayout()
+    }
+
+    private var displayLayout: [[String]] {
+        KeyCodeMapping.keyboardDisplayLayout(for: detectedLayout)
+    }
+
     private var keyCountMap: [String: Int] {
         var map: [String: Int] = [:]
         for entry in entries {
-            let keyName = KeyCodeMapping.keyName(for: entry.keyCode)
+            let keyName = KeyCodeMapping.keyName(for: entry.keyCode, layout: detectedLayout)
             map[keyName, default: 0] += entry.count
         }
         return map
@@ -18,10 +26,10 @@ struct KeyboardHeatmapView: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            ForEach(0..<KeyCodeMapping.qwertzLayout.count, id: \.self) { rowIndex in
+            ForEach(0..<displayLayout.count, id: \.self) { rowIndex in
                 HStack(spacing: 2) {
-                    ForEach(0..<KeyCodeMapping.qwertzLayout[rowIndex].count, id: \.self) { colIndex in
-                        let key = KeyCodeMapping.qwertzLayout[rowIndex][colIndex]
+                    ForEach(0..<displayLayout[rowIndex].count, id: \.self) { colIndex in
+                        let key = displayLayout[rowIndex][colIndex]
                         if !key.isEmpty {
                             KeyView(
                                 label: key,
