@@ -8,6 +8,19 @@ enum DistanceUnit: String {
 }
 
 struct DistanceConverter {
+    private static var _cachedPixelsPerMeter: Double?
+
+    static var currentPixelsPerMeter: Double {
+        if let cached = _cachedPixelsPerMeter { return cached }
+        let value = queryPixelsPerMeter()
+        _cachedPixelsPerMeter = value
+        return value
+    }
+
+    static func refreshDPI() {
+        _cachedPixelsPerMeter = queryPixelsPerMeter()
+    }
+
     static func queryDisplayPPI() -> Double {
         guard let mainScreen = NSScreen.main else { return Constants.defaultPPI }
         let screenNumber = mainScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? CGMainDisplayID()
@@ -27,7 +40,7 @@ struct DistanceConverter {
     }
 
     static func pixelsToMeters(_ pixels: Double) -> Double {
-        return pixels / Constants.pixelsPerMeter
+        return pixels / currentPixelsPerMeter
     }
 
     static func metersToKilometers(_ meters: Double) -> Double {
