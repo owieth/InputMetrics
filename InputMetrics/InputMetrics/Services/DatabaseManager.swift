@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import os
 
 final class DatabaseManager: @unchecked Sendable {
     static let shared = DatabaseManager()
@@ -28,15 +29,15 @@ final class DatabaseManager: @unchecked Sendable {
             try fileManager.createDirectory(at: dbFolder, withIntermediateDirectories: true)
 
             let dbPath = dbFolder.appendingPathComponent("metrics.db").path
-            print("Database path: \(dbPath)")
+            AppLogger.database.info("Database path: \(dbPath)")
 
             dbQueue = try DatabaseQueue(path: dbPath)
             try migrator.migrate(dbQueue!)
 
-            print("Database initialized successfully")
+            AppLogger.database.info("Database initialized")
         } catch {
             initializationError = "Database setup failed: \(error.localizedDescription)"
-            print("Database setup error: \(error)")
+            AppLogger.database.error("Setup failed: \(error.localizedDescription)")
         }
     }
 
@@ -166,7 +167,7 @@ final class DatabaseManager: @unchecked Sendable {
                     )
                 }
             } catch {
-                print("Error updating daily summary: \(error)")
+                AppLogger.database.error("Update daily summary failed: \(error.localizedDescription)")
             }
         }
     }
@@ -179,7 +180,7 @@ final class DatabaseManager: @unchecked Sendable {
                 try DailySummary.fetchOne(db, key: date)
             }
         } catch {
-            print("Error fetching daily summary: \(error)")
+            AppLogger.database.error("Fetch daily summary failed: \(error.localizedDescription)")
             return nil
         }
     }
@@ -195,7 +196,7 @@ final class DatabaseManager: @unchecked Sendable {
                     .fetchAll(db)
             }
         } catch {
-            print("Error fetching daily summaries: \(error)")
+            AppLogger.database.error("Fetch daily summaries failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -234,7 +235,7 @@ final class DatabaseManager: @unchecked Sendable {
                     }
                 }
             } catch {
-                print("Error updating hourly summary: \(error)")
+                AppLogger.database.error("Update hourly summary failed: \(error.localizedDescription)")
             }
         }
     }
@@ -250,7 +251,7 @@ final class DatabaseManager: @unchecked Sendable {
                     .fetchAll(db)
             }
         } catch {
-            print("Error fetching hourly summaries: \(error)")
+            AppLogger.database.error("Fetch hourly summaries failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -266,7 +267,7 @@ final class DatabaseManager: @unchecked Sendable {
                     .fetchAll(db)
             }
         } catch {
-            print("Error fetching hourly summaries: \(error)")
+            AppLogger.database.error("Fetch hourly summaries range failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -290,7 +291,7 @@ final class DatabaseManager: @unchecked Sendable {
                     )
                 }
             } catch {
-                print("Error updating mouse heatmap: \(error)")
+                AppLogger.database.error("Update mouse heatmap failed: \(error.localizedDescription)")
             }
         }
     }
@@ -323,7 +324,7 @@ final class DatabaseManager: @unchecked Sendable {
                     }
                 }
             } catch {
-                print("Error batch updating mouse heatmap: \(error)")
+                AppLogger.database.error("Batch update mouse heatmap failed: \(error.localizedDescription)")
             }
         }
     }
@@ -343,7 +344,7 @@ final class DatabaseManager: @unchecked Sendable {
                 return try request.fetchAll(db)
             }
         } catch {
-            print("Error fetching mouse heatmap: \(error)")
+            AppLogger.database.error("Fetch mouse heatmap failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -360,7 +361,7 @@ final class DatabaseManager: @unchecked Sendable {
                 )
             }
         } catch {
-            print("Error fetching screen IDs: \(error)")
+            AppLogger.database.error("Fetch screen IDs failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -384,7 +385,7 @@ final class DatabaseManager: @unchecked Sendable {
                     )
                 }
             } catch {
-                print("Error updating keyboard entry: \(error)")
+                AppLogger.database.error("Update keyboard entry failed: \(error.localizedDescription)")
             }
         }
     }
@@ -415,7 +416,7 @@ final class DatabaseManager: @unchecked Sendable {
                     }
                 }
             } catch {
-                print("Error updating keyboard batch: \(error)")
+                AppLogger.database.error("Update keyboard batch failed: \(error.localizedDescription)")
             }
         }
     }
@@ -430,7 +431,7 @@ final class DatabaseManager: @unchecked Sendable {
                     .fetchAll(db)
             }
         } catch {
-            print("Error fetching keyboard entries: \(error)")
+            AppLogger.database.error("Fetch keyboard entries failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -479,7 +480,7 @@ final class DatabaseManager: @unchecked Sendable {
                 )
             }
         } catch {
-            print("Error fetching all-time totals: \(error)")
+            AppLogger.database.error("Fetch all-time totals failed: \(error.localizedDescription)")
             return .zero
         }
     }
@@ -494,7 +495,7 @@ final class DatabaseManager: @unchecked Sendable {
                 try DailySummary.order(DailySummary.Columns.date).fetchAll(db)
             }
         } catch {
-            print("Error fetching all daily summaries: \(error)")
+            AppLogger.database.error("Fetch all daily summaries failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -509,7 +510,7 @@ final class DatabaseManager: @unchecked Sendable {
                     .fetchAll(db)
             }
         } catch {
-            print("Error fetching all hourly summaries: \(error)")
+            AppLogger.database.error("Fetch all hourly summaries failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -522,7 +523,7 @@ final class DatabaseManager: @unchecked Sendable {
                 try MouseHeatmapEntry.order(MouseHeatmapEntry.Columns.date).fetchAll(db)
             }
         } catch {
-            print("Error fetching all mouse heatmap entries: \(error)")
+            AppLogger.database.error("Fetch all mouse heatmap entries failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -535,7 +536,7 @@ final class DatabaseManager: @unchecked Sendable {
                 try KeyboardEntry.order(KeyboardEntry.Columns.date).fetchAll(db)
             }
         } catch {
-            print("Error fetching all keyboard entries: \(error)")
+            AppLogger.database.error("Fetch all keyboard entries failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -553,9 +554,9 @@ final class DatabaseManager: @unchecked Sendable {
                     try db.execute(sql: "DELETE FROM \(KeyboardEntry.databaseTableName)")
                     try db.execute(sql: "DELETE FROM \(HourlySummary.databaseTableName)")
                 }
-                print("All data reset successfully")
+                AppLogger.database.info("All data reset")
             } catch {
-                print("Error resetting data: \(error)")
+                AppLogger.database.error("Reset data failed: \(error.localizedDescription)")
             }
         }
     }
@@ -582,9 +583,9 @@ final class DatabaseManager: @unchecked Sendable {
                     try db.execute(sql: "DELETE FROM hourly_summary WHERE date < ?", arguments: [cutoffString])
                     try db.execute(sql: "VACUUM")
                 }
-                print("Pruned data older than \(cutoffString)")
+                AppLogger.database.info("Pruned data older than \(cutoffString)")
             } catch {
-                print("Error pruning old data: \(error)")
+                AppLogger.database.error("Prune old data failed: \(error.localizedDescription)")
             }
         }
     }
@@ -608,7 +609,7 @@ final class DatabaseManager: @unchecked Sendable {
             let attributes = try fileManager.attributesOfItem(atPath: dbPath.path)
             return attributes[.size] as? Int64 ?? 0
         } catch {
-            print("Error getting database file size: \(error)")
+            AppLogger.database.error("Get database file size failed: \(error.localizedDescription)")
             return 0
         }
     }
@@ -625,7 +626,7 @@ final class DatabaseManager: @unchecked Sendable {
                 return (daily, mouse, keyboard, hourly)
             }
         } catch {
-            print("Error getting record counts: \(error)")
+            AppLogger.database.error("Get record counts failed: \(error.localizedDescription)")
             return (0, 0, 0, 0)
         }
     }
