@@ -68,6 +68,9 @@ final class KeyboardStatsViewModel {
             ))
         }
 
+        if selectedRange == .year {
+            chartData = aggregateByWeek(chartData)
+        }
     }
 
     private func aggregateByWeek(_ data: [DailySummary]) -> [DailySummary] {

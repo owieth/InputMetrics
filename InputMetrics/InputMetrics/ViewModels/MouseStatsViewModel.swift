@@ -63,6 +63,9 @@ final class MouseStatsViewModel {
             ))
         }
 
+        if selectedRange == .year {
+            chartData = aggregateByWeek(chartData)
+        }
     }
 
     func loadAllTimeStats() {
