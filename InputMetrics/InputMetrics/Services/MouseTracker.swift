@@ -46,6 +46,7 @@ class MouseTracker {
     private init() {
         setupPersistTimer()
         rebuildScreenCache()
+        DistanceConverter.refreshDPI()
 
         NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
@@ -93,6 +94,8 @@ class MouseTracker {
             boundingHeight: maxY - minY,
             screens: cachedScreens
         )
+
+        DistanceConverter.refreshDPI()
     }
 
     func trackMovement(to point: CGPoint) {
