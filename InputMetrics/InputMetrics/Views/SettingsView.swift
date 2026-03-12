@@ -1,6 +1,11 @@
 import SwiftUI
 import LaunchAtLogin
 
+enum ExportFormat: String, CaseIterable {
+    case csv = "CSV"
+    case json = "JSON"
+}
+
 enum ExportResult {
     case success(String)
     case failure(String)
@@ -31,6 +36,7 @@ struct SettingsView: View {
     @State private var showResetConfirmation = false
     @State private var exportResult: ExportResult?
     @State private var showExportToast = false
+    @State private var exportFormat: ExportFormat = .csv
     @State private var databaseSize: String = "Calculating..."
     @State private var totalRecords: Int = 0
 
@@ -164,6 +170,21 @@ struct SettingsView: View {
                     // Data Section
                     SettingsSectionView(title: "Data", icon: "externaldrive") {
                         VStack(spacing: 12) {
+                            SettingsRowView {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Label("Export format", systemImage: "doc")
+                                        .font(.body)
+
+                                    Picker("", selection: $exportFormat) {
+                                        ForEach(ExportFormat.allCases, id: \.self) { format in
+                                            Text(format.rawValue).tag(format)
+                                        }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .labelsHidden()
+                                }
+                            }
+
                             Button(action: {
                                 exportData()
                             }) {
