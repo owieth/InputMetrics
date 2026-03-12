@@ -8,7 +8,7 @@ enum DistanceUnit: String {
 }
 
 struct DistanceConverter {
-    private static var _cachedPixelsPerMeter: Double?
+    nonisolated(unsafe) private static var _cachedPixelsPerMeter: Double?
 
     static var currentPixelsPerMeter: Double {
         if let cached = _cachedPixelsPerMeter { return cached }

@@ -3,18 +3,14 @@ import SwiftUI
 struct KeyboardHeatmapView: View {
     let entries: [KeyboardEntry]
 
-    private var detectedLayout: KeyboardLayout {
-        KeyCodeMapping.detectCurrentLayout()
-    }
-
     private var displayLayout: [[String]] {
-        KeyCodeMapping.keyboardDisplayLayout(for: detectedLayout)
+        KeyCodeMapping.qwertzLayout
     }
 
     private var keyCountMap: [String: Int] {
         var map: [String: Int] = [:]
         for entry in entries {
-            let keyName = KeyCodeMapping.keyName(for: entry.keyCode, layout: detectedLayout)
+            let keyName = KeyCodeMapping.keyName(for: entry.keyCode)
             map[keyName, default: 0] += entry.count
         }
         return map
