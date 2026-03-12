@@ -15,6 +15,9 @@ struct DailySummary: Codable, FetchableRecord, PersistableRecord {
     var firstActiveAt: String?
     var lastActiveAt: String?
     var activeMinutes: Int = 0
+    var avgMouseSpeed: Double = 0
+    var peakMouseSpeed: Double = 0
+    var peakWPM: Double = 0
 
     enum CodingKeys: String, CodingKey {
         case date
@@ -28,6 +31,9 @@ struct DailySummary: Codable, FetchableRecord, PersistableRecord {
         case firstActiveAt = "first_active_at"
         case lastActiveAt = "last_active_at"
         case activeMinutes = "active_minutes"
+        case avgMouseSpeed = "avg_mouse_speed"
+        case peakMouseSpeed = "peak_mouse_speed"
+        case peakWPM = "peak_wpm"
     }
 
     enum Columns {
@@ -42,5 +48,8 @@ struct DailySummary: Codable, FetchableRecord, PersistableRecord {
         static let firstActiveAt = Column(CodingKeys.firstActiveAt)
         static let lastActiveAt = Column(CodingKeys.lastActiveAt)
         static let activeMinutes = Column(CodingKeys.activeMinutes)
+        static let avgMouseSpeed = Column(CodingKeys.avgMouseSpeed)
+        static let peakMouseSpeed = Column(CodingKeys.peakMouseSpeed)
+        static let peakWPM = Column(CodingKeys.peakWPM)
     }
 }
