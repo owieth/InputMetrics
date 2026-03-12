@@ -136,6 +136,56 @@ struct SettingsView: View {
                         }
                     }
 
+                    // Goals Section
+                    SettingsSectionView(title: "Goals", icon: "target") {
+                        VStack(spacing: 0) {
+                            SettingsRowView {
+                                HStack {
+                                    Label("Enable daily goals", systemImage: "flag")
+                                        .font(.body)
+                                    Spacer()
+                                    Toggle("", isOn: $preferences.goalConfig.enabled)
+                                        .labelsHidden()
+                                }
+                            }
+
+                            if preferences.goalConfig.enabled {
+                                SettingsRowView {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Label("Daily keystroke goal", systemImage: "keyboard")
+                                            .font(.body)
+                                        HStack {
+                                            Slider(value: Binding(
+                                                get: { Double(preferences.goalConfig.keystrokesDaily) },
+                                                set: { preferences.goalConfig.keystrokesDaily = Int($0) }
+                                            ), in: 1000...50000, step: 1000)
+                                            Text("\(preferences.goalConfig.keystrokesDaily)")
+                                                .monospacedDigit()
+                                                .frame(width: 60, alignment: .trailing)
+                                        }
+                                    }
+                                }
+
+                                SettingsRowView {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Label("Daily distance goal (km)", systemImage: "arrow.up.right")
+                                            .font(.body)
+                                        let kmValue = Binding(
+                                            get: { preferences.goalConfig.distanceDaily / 4_330_000 },
+                                            set: { preferences.goalConfig.distanceDaily = $0 * 4_330_000 }
+                                        )
+                                        HStack {
+                                            Slider(value: kmValue, in: 0.1...10, step: 0.1)
+                                            Text(String(format: "%.1f km", kmValue.wrappedValue))
+                                                .monospacedDigit()
+                                                .frame(width: 70, alignment: .trailing)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Storage Section
                     SettingsSectionView(title: "Storage", icon: "internaldrive") {
                         VStack(spacing: 0) {
