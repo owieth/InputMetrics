@@ -11,7 +11,7 @@ final class DatabaseManagerTests: XCTestCase {
 
     override func setUp() async throws {
         dbQueue = try DatabaseQueue()
-        try dbQueue.write { db in
+        try await dbQueue.write { db in
             try db.create(table: "daily_summary") { t in
                 t.column("date", .text).primaryKey()
                 t.column("mouse_distance_px", .double).defaults(to: 0)
@@ -21,6 +21,12 @@ final class DatabaseManagerTests: XCTestCase {
                 t.column("keystrokes", .integer).defaults(to: 0)
                 t.column("scroll_distance_vertical", .double).defaults(to: 0)
                 t.column("scroll_distance_horizontal", .double).defaults(to: 0)
+                t.column("first_active_at", .text)
+                t.column("last_active_at", .text)
+                t.column("active_minutes", .integer).defaults(to: 0)
+                t.column("avg_mouse_speed", .double).defaults(to: 0)
+                t.column("peak_mouse_speed", .double).defaults(to: 0)
+                t.column("peak_wpm", .double).defaults(to: 0)
             }
 
             try db.create(table: "mouse_heatmap") { t in
@@ -57,7 +63,7 @@ final class DatabaseManagerTests: XCTestCase {
 
     // MARK: - DailySummary CRUD
 
-    func testInsertAndFetchDailySummary() throws {
+    func testInsertAndFetchDailySummary() async throws {
         let summary = DailySummary(
             date: "2025-01-15",
             mouseDistancePx: 1000,
@@ -69,11 +75,11 @@ final class DatabaseManagerTests: XCTestCase {
             scrollDistanceHorizontal: 50
         )
 
-        try dbQueue.write { db in
+        try await dbQueue.write { db in
             try summary.insert(db)
         }
 
-        let fetched = try dbQueue.read { db in
+        let fetched = try await dbQueue.read { db in
             try DailySummary.fetchOne(db, key: "2025-01-15")
         }
 
@@ -83,8 +89,8 @@ final class DatabaseManagerTests: XCTestCase {
         XCTAssertEqual(fetched?.keystrokes, 500)
     }
 
-    func testUpdateDailySummary() throws {
-        var summary = DailySummary(
+    func testUpdateDailySummary() async throws {
+        let summary = DailySummary(
             date: "2025-01-15",
             mouseDistancePx: 1000,
             mouseClicksLeft: 10,
@@ -95,25 +101,27 @@ final class DatabaseManagerTests: XCTestCase {
             scrollDistanceHorizontal: 0
         )
 
-        try dbQueue.write { db in
+        try await dbQueue.write { db in
             try summary.insert(db)
         }
 
-        summary.keystrokes = 1000
+        var modified = summary
+        modified.keystrokes = 1000
+        let updated = modified
 
-        try dbQueue.write { db in
-            try summary.update(db)
+        try await dbQueue.write { db in
+            try updated.update(db)
         }
 
-        let fetched = try dbQueue.read { db in
+        let fetched = try await dbQueue.read { db in
             try DailySummary.fetchOne(db, key: "2025-01-15")
         }
 
         XCTAssertEqual(fetched?.keystrokes, 1000)
     }
 
-    func testFetchNonExistentSummary() throws {
-        let fetched = try dbQueue.read { db in
+    func testFetchNonExistentSummary() async throws {
+        let fetched = try await dbQueue.read { db in
             try DailySummary.fetchOne(db, key: "2099-01-01")
         }
         XCTAssertNil(fetched)
@@ -121,14 +129,14 @@ final class DatabaseManagerTests: XCTestCase {
 
     // MARK: - KeyboardEntry CRUD
 
-    func testInsertAndFetchKeyboardEntry() throws {
+    func testInsertAndFetchKeyboardEntry() async throws {
         let entry = KeyboardEntry(date: "2025-01-15", keyCode: 0, modifierFlags: 0, count: 42)
 
-        try dbQueue.write { db in
+        try await dbQueue.write { db in
             try entry.insert(db)
         }
 
-        let entries = try dbQueue.read { db in
+        let entries = try await dbQueue.read { db in
             try KeyboardEntry.filter(KeyboardEntry.Columns.date == "2025-01-15").fetchAll(db)
         }
 
@@ -144,14 +152,14 @@ final class DatabaseManagerTests: XCTestCase {
 
     // MARK: - MouseHeatmapEntry CRUD
 
-    func testInsertAndFetchMouseHeatmap() throws {
+    func testInsertAndFetchMouseHeatmap() async throws {
         let entry = MouseHeatmapEntry(date: "2025-01-15", screenId: "1", bucketX: 25, bucketY: 25, clickCount: 5)
 
-        try dbQueue.write { db in
+        try await dbQueue.write { db in
             try entry.insert(db)
         }
 
-        let entries = try dbQueue.read { db in
+        let entries = try await dbQueue.read { db in
             try MouseHeatmapEntry.filter(MouseHeatmapEntry.Columns.date == "2025-01-15").fetchAll(db)
         }
 
@@ -161,14 +169,14 @@ final class DatabaseManagerTests: XCTestCase {
 
     // MARK: - HourlySummary CRUD
 
-    func testInsertAndFetchHourlySummary() throws {
+    func testInsertAndFetchHourlySummary() async throws {
         let summary = HourlySummary(date: "2025-01-15", hour: 14, mouseDistancePx: 500, mouseClicks: 20, keystrokes: 100)
 
-        try dbQueue.write { db in
+        try await dbQueue.write { db in
             try summary.insert(db)
         }
 
-        let summaries = try dbQueue.read { db in
+        let summaries = try await dbQueue.read { db in
             try HourlySummary
                 .filter(HourlySummary.Columns.date == "2025-01-15")
                 .order(HourlySummary.Columns.hour)
