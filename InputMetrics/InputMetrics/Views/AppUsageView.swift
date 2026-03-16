@@ -11,7 +11,7 @@ struct AppUsageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if topApps.isEmpty {
-                Text("No app usage data yet")
+                Text("App usage will be tracked as you switch between applications")
                     .foregroundStyle(.secondary)
             } else {
                 Chart(topApps, id: \.bundleId) { entry in

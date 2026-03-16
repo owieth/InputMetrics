@@ -14,7 +14,7 @@ struct HourlyBreakdownView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if hourlySummaries.isEmpty {
-                Text("No hourly data yet")
+                Text("Hourly breakdown will appear as you use your Mac today")
                     .foregroundStyle(.secondary)
                     .frame(height: 120)
             } else {

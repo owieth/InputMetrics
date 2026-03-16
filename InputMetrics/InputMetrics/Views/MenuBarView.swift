@@ -99,7 +99,7 @@ struct MenuBarView: View {
                             Text("\(first) - \(last)")
                                 .font(.headline.monospacedDigit())
                         } else {
-                            Text("No activity yet")
+                            Text("Activity tracking will begin as you use your Mac")
                                 .font(.headline)
                                 .foregroundStyle(.secondary)
                         }
@@ -351,7 +351,7 @@ struct MenuBarView: View {
                     }
                     .padding(.horizontal)
                 } else {
-                    Text("No data yet")
+                    Text("Use your Mac for a few days to see trends")
                         .foregroundStyle(.secondary)
                         .frame(height: 150)
                 }
@@ -365,7 +365,7 @@ struct MenuBarView: View {
                             .frame(height: 200)
                             .padding(.top, 8)
                     } else {
-                        Text("No heatmap data yet")
+                        Text("Move your mouse to see the heatmap")
                             .foregroundStyle(.secondary)
                             .frame(height: 100)
                     }
@@ -484,7 +484,7 @@ struct MenuBarView: View {
                     }
                     .padding(.horizontal)
                 } else {
-                    Text("No data yet")
+                    Text("Use your Mac for a few days to see trends")
                         .foregroundStyle(.secondary)
                         .frame(height: 150)
                 }
@@ -498,7 +498,7 @@ struct MenuBarView: View {
                             .frame(height: 150)
                             .padding(.top, 8)
                     } else {
-                        Text("No keyboard data yet")
+                        Text("Start typing to see your keyboard heatmap")
                             .foregroundStyle(.secondary)
                             .frame(height: 100)
                     }
