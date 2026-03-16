@@ -8,6 +8,7 @@ final class KeyboardStatsViewModel {
     var selectedDate: Date = Date()
     var chartData: [DailySummary] = []
     var keyboardEntries: [KeyboardEntry] = []
+    var isLoading = true
 
     var topKeys: [(id: String, name: String, count: Int)] {
         let sorted = keyboardEntries.sorted { $0.count > $1.count }
@@ -15,8 +16,10 @@ final class KeyboardStatsViewModel {
     }
 
     func loadAll() {
+        isLoading = true
         loadChartData()
         loadKeyboardData()
+        isLoading = false
     }
 
     func onRangeChanged() {
