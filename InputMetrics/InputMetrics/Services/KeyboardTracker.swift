@@ -62,11 +62,13 @@ class KeyboardTracker {
     }
 
     private func setupPersistTimer() {
-        persistTimer = Timer.scheduledTimer(withTimeInterval: persistInterval, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: persistInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.persistData()
             }
         }
+        RunLoop.current.add(timer, forMode: .common)
+        persistTimer = timer
     }
 
     func persistData() {

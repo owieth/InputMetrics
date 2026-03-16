@@ -13,7 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Prevent App Nap from suspending background event monitoring
         backgroundActivity = ProcessInfo.processInfo.beginActivity(
-            options: [.userInitiated, .idleSystemSleepDisabled],
+            options: .userInitiated,
             reason: "Continuous input event monitoring"
         )
 
@@ -139,6 +139,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        if let activity = backgroundActivity {
+            ProcessInfo.processInfo.endActivity(activity)
+            backgroundActivity = nil
+        }
+
         liveStatsTimer?.invalidate()
         liveStatsTimer = nil
         HotkeyManager.shared.stop()
@@ -155,19 +160,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Live Stats
 
     private func startLiveStatsTimer() {
-        liveStatsTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        let statsTimer = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.updateLiveStats()
             }
         }
+        RunLoop.current.add(statsTimer, forMode: .common)
+        liveStatsTimer = statsTimer
     }
 
     private func startMilestoneCheckTimer() {
-        milestoneTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in
+        let timer = Timer(timeInterval: 300, repeats: true) { _ in
             Task { @MainActor in
                 NotificationManager.shared.checkMilestones()
             }
         }
+        RunLoop.current.add(timer, forMode: .common)
+        milestoneTimer = timer
     }
 
     private func updateLiveStats() {

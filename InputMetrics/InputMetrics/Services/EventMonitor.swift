@@ -105,18 +105,20 @@ class EventMonitor {
 
         self.eventTap = tap
         let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+        CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
         AppLogger.events.info("Event monitoring started")
         return true
     }
 
     func startAppTracking() {
-        appPersistTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.persistAppUsage()
             }
         }
+        RunLoop.current.add(timer, forMode: .common)
+        appPersistTimer = timer
     }
 
     private func persistAppUsage() {
@@ -135,7 +137,7 @@ class EventMonitor {
 
     private func startRetryTimer() {
         retryCount = 0
-        retryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+        let timer = Timer(timeInterval: 2.0, repeats: true) { [weak self] timer in
             guard let self else { timer.invalidate(); return }
             MainActor.assumeIsolated {
                 self.retryCount += 1
@@ -150,6 +152,8 @@ class EventMonitor {
                 }
             }
         }
+        RunLoop.current.add(timer, forMode: .common)
+        retryTimer = timer
     }
 
     func getActivityTimes() -> (first: String?, last: String?) {
