@@ -89,7 +89,7 @@ struct MouseStatsView: View {
                                 .font(.caption)
                         }
                     } else {
-                        Text("No data yet")
+                        Text("Start using your mouse and keyboard to see stats here")
                             .foregroundStyle(.secondary)
                     }
                 }

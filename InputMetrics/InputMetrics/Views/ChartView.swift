@@ -21,7 +21,7 @@ struct ChartView: View {
                 .padding(.bottom, 4)
 
             if data.isEmpty {
-                Text("No data available")
+                Text("Use your Mac for a few days to see trends")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
