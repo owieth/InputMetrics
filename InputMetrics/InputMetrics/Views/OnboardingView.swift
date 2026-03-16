@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct OnboardingView: View {
     @State private var currentStep = 0
@@ -7,8 +8,8 @@ struct OnboardingView: View {
     private let steps: [(icon: String, title: String, description: String)] = [
         ("cursorarrow.motionlines", "Track Your Input",
          "InputMetrics runs in your menu bar and tracks mouse movements, clicks, keyboard usage, and scroll activity."),
-        ("lock.shield", "Privacy First",
-         "All data stays on your device. No data is sent anywhere. InputMetrics needs Accessibility permission to track input events."),
+        ("lock.shield", "Permissions Required",
+         "All data stays on your device. InputMetrics needs two macOS permissions:\n\n• Accessibility — for mouse tracking\n• Input Monitoring — for keyboard tracking\n\nGrant both in System Settings > Privacy & Security."),
         ("chart.bar.xaxis", "View Your Stats",
          "Click the menu bar icon to see today's activity. Open the dashboard for detailed charts and heatmaps."),
         ("gearshape", "Customize",
@@ -31,6 +32,15 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 300)
+
+            if currentStep == 1 {
+                Button("Open System Settings") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .buttonStyle(.bordered)
+            }
 
             Spacer()
 
@@ -68,6 +78,6 @@ struct OnboardingView: View {
             }
         }
         .padding(32)
-        .frame(width: 450, height: 400)
+        .frame(width: 450, height: 420)
     }
 }
