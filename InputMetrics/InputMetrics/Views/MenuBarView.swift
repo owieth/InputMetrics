@@ -7,6 +7,7 @@ struct MenuBarView: View {
     @State private var viewModel = MenuBarViewModel()
     @State private var hoveredMouseLabel: String?
     @State private var hoveredKeyboardLabel: String?
+    @State private var showKeyboardWarning = false
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -45,6 +46,42 @@ struct MenuBarView: View {
 
             ScrollView {
                 VStack(spacing: 16) {
+                    if showKeyboardWarning {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Keyboard tracking requires Input Monitoring permission")
+                                    .font(.caption.bold())
+                                Button("Open System Settings") {
+                                    if let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ListenEvent") {
+                                        NSWorkspace.shared.open(url)
+                                    }
+                                }
+                                .font(.caption)
+                                .buttonStyle(.link)
+                            }
+
+                            Spacer()
+
+                            Button {
+                                showKeyboardWarning = false
+                                preferences.dismissedKeyboardPermissionWarning = true
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Dismiss")
+                        }
+                        .padding(10)
+                        .background(Color.orange.opacity(0.15))
+                        .cornerRadius(10)
+                        .padding(.horizontal)
+                    }
+
                     // Today's Activity Header
                     Text("Today's Activity")
                         .font(.title3.bold())
@@ -151,9 +188,11 @@ struct MenuBarView: View {
             viewModel.updateStats()
             viewModel.refreshAllTimeTotalsIfNeeded()
             viewModel.updateAllTimeStats()
+            updateKeyboardWarning()
         }
         .onAppear {
             viewModel.loadAll()
+            updateKeyboardWarning()
         }
     }
 
@@ -505,6 +544,16 @@ struct MenuBarView: View {
                         .padding()
                 }
             }
+        }
+    }
+
+    private func updateKeyboardWarning() {
+        let missing = EventMonitor.shared.isKeyboardPermissionLikelyMissing
+        let dismissed = preferences.dismissedKeyboardPermissionWarning
+        showKeyboardWarning = missing && !dismissed
+
+        if !missing && preferences.dismissedKeyboardPermissionWarning {
+            preferences.dismissedKeyboardPermissionWarning = false
         }
     }
 

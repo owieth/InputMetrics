@@ -9,6 +9,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var liveStatsTimer: Timer?
     private var milestoneTimer: Timer?
     private var backgroundActivity: NSObjectProtocol?
+    private var keyboardPermissionTimer: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Prevent App Nap from suspending background event monitoring
@@ -91,6 +92,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Delayed check for Input Monitoring permission
+        scheduleKeyboardPermissionCheck()
 
         AppLogger.general.info("App launched")
     }
@@ -146,6 +149,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         liveStatsTimer?.invalidate()
         liveStatsTimer = nil
+        keyboardPermissionTimer?.invalidate()
+        keyboardPermissionTimer = nil
         HotkeyManager.shared.stop()
         milestoneTimer?.invalidate()
         milestoneTimer = nil
@@ -154,6 +159,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             MouseTracker.shared.persistData()
             KeyboardTracker.shared.persistData()
             EventMonitor.shared.stop()
+        }
+    }
+
+    // MARK: - Keyboard Permission Check
+
+    private func scheduleKeyboardPermissionCheck() {
+        let timer = Timer(timeInterval: 30.0, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.checkKeyboardPermission()
+            }
+        }
+        RunLoop.current.add(timer, forMode: .common)
+        keyboardPermissionTimer = timer
+    }
+
+    private func checkKeyboardPermission() {
+        guard EventMonitor.shared.isKeyboardPermissionLikelyMissing else { return }
+        guard !UserPreferences.shared.dismissedKeyboardPermissionWarning else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Input Monitoring Permission Required"
+        alert.informativeText = "InputMetrics needs Input Monitoring permission to track keyboard events.\n\n1. Open System Settings\n2. Go to Privacy & Security > Input Monitoring\n3. Enable InputMetrics\n\nKeyboard tracking will start automatically once permission is granted."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "Later")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            if let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ListenEvent") {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
 
