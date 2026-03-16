@@ -66,11 +66,25 @@ jobs:
         run: |
           cd build/export
           zip -r InputMetrics.zip InputMetrics.app
-          xcrun notarytool submit InputMetrics.zip \
+
+          SUBMIT_OUTPUT=$(xcrun notarytool submit InputMetrics.zip \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait 2>&1) || true
+          echo "$SUBMIT_OUTPUT"
+
+          SUBMISSION_ID=$(echo "$SUBMIT_OUTPUT" | grep "id:" | head -1 | awk '{print $2}')
+
+          if echo "$SUBMIT_OUTPUT" | grep -q "status: Invalid"; then
+            echo "Notarization failed. Fetching log..."
+            xcrun notarytool log "$SUBMISSION_ID" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_ID_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID"
+            exit 1
+          fi
+
           xcrun stapler staple InputMetrics.app
           rm InputMetrics.zip
 
