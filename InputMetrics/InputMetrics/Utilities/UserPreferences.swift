@@ -30,10 +30,12 @@ enum DataRetentionPeriod: String, CaseIterable, Identifiable {
 @MainActor
 class UserPreferences: ObservableObject {
     static let shared = UserPreferences()
+    private static let sharedDefaults = UserDefaults(suiteName: WidgetDataProvider.appGroupID)
 
     @Published var distanceUnit: DistanceUnit {
         didSet {
             UserDefaults.standard.set(distanceUnit.rawValue, forKey: "distanceUnit")
+            Self.sharedDefaults?.set(distanceUnit.rawValue, forKey: "distanceUnit")
         }
     }
 
@@ -100,5 +102,7 @@ class UserPreferences: ObservableObject {
         self.notificationsEnabled = UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? false
         self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
         self.dismissedKeyboardPermissionWarning = UserDefaults.standard.bool(forKey: "dismissedKeyboardPermissionWarning")
+
+        Self.sharedDefaults?.set(self.distanceUnit.rawValue, forKey: "distanceUnit")
     }
 }
