@@ -8,10 +8,13 @@ final class MouseStatsViewModel {
     var selectedDate: Date = Date()
     var chartData: [DailySummary] = []
     var allTimeStats: DailySummary?
+    var isLoading = true
 
     func loadAll() {
+        isLoading = true
         loadChartData()
         loadAllTimeStats()
+        isLoading = false
     }
 
     func onRangeChanged() {
