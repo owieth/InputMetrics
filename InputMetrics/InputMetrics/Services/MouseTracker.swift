@@ -45,13 +45,14 @@ class MouseTracker {
     }
 
     private var screenCache: ScreenCache?
+    private var screenObserver: NSObjectProtocol?
 
     private init() {
         setupPersistTimer()
         rebuildScreenCache()
         DistanceConverter.refreshDPI()
 
-        NotificationCenter.default.addObserver(
+        screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
             queue: .main
@@ -268,6 +269,9 @@ class MouseTracker {
     nonisolated deinit {
         MainActor.assumeIsolated {
             persistTimer?.invalidate()
+            if let observer = screenObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
         }
     }
 }
