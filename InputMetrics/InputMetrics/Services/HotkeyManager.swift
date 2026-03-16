@@ -39,9 +39,11 @@ class HotkeyManager {
         return hasRequiredFlags && isCorrectKey
     }
 
-    deinit {
-        if let monitor = globalMonitor {
-            NSEvent.removeMonitor(monitor)
+    nonisolated deinit {
+        MainActor.assumeIsolated {
+            if let monitor = globalMonitor {
+                NSEvent.removeMonitor(monitor)
+            }
         }
     }
 }

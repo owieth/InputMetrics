@@ -8,8 +8,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var popover: NSPopover?
     private var liveStatsTimer: Timer?
     private var milestoneTimer: Timer?
+    private var backgroundActivity: NSObjectProtocol?
+    private var keyboardPermissionTimer: Timer?
+    private var isQuittingFromMenu = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Prevent App Nap from suspending background event monitoring
+        backgroundActivity = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiated,
+            reason: "Continuous input event monitoring"
+        )
+
         // Initialize database
         _ = DatabaseManager.shared
 
@@ -84,6 +93,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Delayed check for Input Monitoring permission
+        scheduleKeyboardPermissionCheck()
 
         AppLogger.general.info("App launched")
     }
@@ -128,12 +139,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func quitApp() {
+        isQuittingFromMenu = true
         NSApp.terminate(nil)
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if isQuittingFromMenu {
+            return .terminateNow
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "Quit InputMetrics?"
+        alert.informativeText = "InputMetrics runs in the menu bar to track your input. To quit, use the menu bar icon's right-click menu."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Keep Running")
+        alert.addButton(withTitle: "Quit")
+
+        let response = alert.runModal()
+        if response == .alertSecondButtonReturn {
+            return .terminateNow
+        }
+        return .terminateCancel
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
+        if let activity = backgroundActivity {
+            ProcessInfo.processInfo.endActivity(activity)
+            backgroundActivity = nil
+        }
+
         liveStatsTimer?.invalidate()
         liveStatsTimer = nil
+        keyboardPermissionTimer?.invalidate()
+        keyboardPermissionTimer = nil
         HotkeyManager.shared.stop()
         milestoneTimer?.invalidate()
         milestoneTimer = nil
@@ -145,22 +183,57 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    // MARK: - Live Stats
+    // MARK: - Keyboard Permission Check
 
-    private func startLiveStatsTimer() {
-        liveStatsTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+    private func scheduleKeyboardPermissionCheck() {
+        let timer = Timer(timeInterval: 30.0, repeats: false) { [weak self] _ in
             Task { @MainActor in
-                self?.updateLiveStats()
+                self?.checkKeyboardPermission()
+            }
+        }
+        RunLoop.current.add(timer, forMode: .common)
+        keyboardPermissionTimer = timer
+    }
+
+    private func checkKeyboardPermission() {
+        guard EventMonitor.shared.isKeyboardPermissionLikelyMissing else { return }
+        guard !UserPreferences.shared.dismissedKeyboardPermissionWarning else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Input Monitoring Permission Required"
+        alert.informativeText = "InputMetrics needs Input Monitoring permission to track keyboard events.\n\n1. Open System Settings\n2. Go to Privacy & Security > Input Monitoring\n3. Enable InputMetrics\n\nKeyboard tracking will start automatically once permission is granted."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "Later")
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            if let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ListenEvent") {
+                NSWorkspace.shared.open(url)
             }
         }
     }
 
+    // MARK: - Live Stats
+
+    private func startLiveStatsTimer() {
+        let statsTimer = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateLiveStats()
+            }
+        }
+        RunLoop.current.add(statsTimer, forMode: .common)
+        liveStatsTimer = statsTimer
+    }
+
     private func startMilestoneCheckTimer() {
-        milestoneTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { _ in
+        let timer = Timer(timeInterval: 300, repeats: true) { _ in
             Task { @MainActor in
                 NotificationManager.shared.checkMilestones()
             }
         }
+        RunLoop.current.add(timer, forMode: .common)
+        milestoneTimer = timer
     }
 
     private func updateLiveStats() {

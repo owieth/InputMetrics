@@ -19,6 +19,16 @@ class EventMonitor {
     private var activeSeconds: TimeInterval = 0
     private let idleThreshold: TimeInterval = 300
 
+    private var appBuffer: [String: (name: String, keystrokes: Int, clicks: Int)] = [:]
+    private var appPersistTimer: Timer?
+
+    private var mouseEventCount: Int = 0
+    private var keyboardEventCount: Int = 0
+
+    var isKeyboardPermissionLikelyMissing: Bool {
+        mouseEventCount > 50 && keyboardEventCount == 0
+    }
+
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
@@ -36,6 +46,7 @@ class EventMonitor {
     private init() {}
 
     func start() {
+        startAppTracking()
         if createAndStartEventTap() { return }
 
         AppLogger.events.warning("Event tap creation failed -- accessibility permission likely not granted")
@@ -59,6 +70,9 @@ class EventMonitor {
     }
 
     func stop() {
+        appPersistTimer?.invalidate()
+        appPersistTimer = nil
+        persistAppUsage()
         retryTimer?.invalidate()
         retryTimer = nil
         guard let eventTap = eventTap else { return }
@@ -98,15 +112,39 @@ class EventMonitor {
 
         self.eventTap = tap
         let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+        CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
         AppLogger.events.info("Event monitoring started")
         return true
     }
 
+    func startAppTracking() {
+        let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.persistAppUsage()
+            }
+        }
+        RunLoop.current.add(timer, forMode: .common)
+        appPersistTimer = timer
+    }
+
+    private func persistAppUsage() {
+        let today = DateHelper.todayString()
+        for (bundleId, data) in appBuffer {
+            DatabaseManager.shared.updateAppUsage(
+                date: today,
+                bundleId: bundleId,
+                appName: data.name,
+                keystrokes: data.keystrokes,
+                mouseClicks: data.clicks
+            )
+        }
+        appBuffer.removeAll()
+    }
+
     private func startRetryTimer() {
         retryCount = 0
-        retryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
+        let timer = Timer(timeInterval: 2.0, repeats: true) { [weak self] timer in
             guard let self else { timer.invalidate(); return }
             MainActor.assumeIsolated {
                 self.retryCount += 1
@@ -121,6 +159,8 @@ class EventMonitor {
                 }
             }
         }
+        RunLoop.current.add(timer, forMode: .common)
+        retryTimer = timer
     }
 
     func getActivityTimes() -> (first: String?, last: String?) {
@@ -162,25 +202,49 @@ class EventMonitor {
 
             switch type {
             case .mouseMoved:
+                mouseEventCount += 1
                 MouseTracker.shared.trackMovement(to: location)
 
             case .leftMouseDown:
+                mouseEventCount += 1
                 MouseTracker.shared.trackClick(type: .left, at: location)
 
             case .rightMouseDown:
+                mouseEventCount += 1
                 MouseTracker.shared.trackClick(type: .right, at: location)
 
             case .otherMouseDown:
+                mouseEventCount += 1
                 MouseTracker.shared.trackClick(type: .middle, at: location)
 
             case .keyDown:
+                keyboardEventCount += 1
                 KeyboardTracker.shared.trackKeystroke(keyCode: keyCode, modifierFlags: flags)
 
             case .scrollWheel:
+                mouseEventCount += 1
                 MouseTracker.shared.trackScroll(deltaX: scrollDeltaX, deltaY: scrollDeltaY)
 
             default:
                 break
+            }
+
+            if let app = NSWorkspace.shared.frontmostApplication,
+               let bundleId = app.bundleIdentifier {
+                let name = app.localizedName ?? bundleId
+                var entry = appBuffer[bundleId] ?? (name: name, keystrokes: 0, clicks: 0)
+                entry.name = name
+
+                switch type {
+                case .keyDown:
+                    entry.keystrokes += 1
+                case .leftMouseDown, .rightMouseDown, .otherMouseDown:
+                    entry.clicks += 1
+                default:
+                    break
+                }
+
+                appBuffer[bundleId] = entry
             }
         }
     }

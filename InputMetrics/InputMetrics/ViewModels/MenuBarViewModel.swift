@@ -21,9 +21,12 @@ final class MenuBarViewModel {
     var currentStreak: Int = 0
     var keystrokeProgress: Double = 0
     var distanceProgress: Double = 0
+    var appUsageEntries: [AppUsageEntry] = []
     var scrollVertical: Double = 0
     var scrollHorizontal: Double = 0
     var activeMinutes: Int = 0
+    var peakMouseSpeed: Double = 0
+    var peakWPM: Double = 0
     var allTimeDistance: Double = 0
     var allTimeClicks: Int = 0
     var allTimeKeystrokes: Int = 0
@@ -49,6 +52,7 @@ final class MenuBarViewModel {
         loadHeatmapData()
         loadKeyboardData()
         loadHourlySummaries()
+        loadAppUsage()
         refreshCachedTotals()
         updateAllTimeStats()
     }
@@ -71,6 +75,8 @@ final class MenuBarViewModel {
             firstActiveAt = summary.firstActiveAt ?? liveActivity.first
             lastActiveAt = liveActivity.last ?? summary.lastActiveAt
             activeMinutes = summary.activeMinutes
+            peakMouseSpeed = summary.peakMouseSpeed
+            peakWPM = summary.peakWPM
         } else {
             mouseDistance = mouseStats.distance
             keystrokes = keyboardStats
@@ -81,6 +87,8 @@ final class MenuBarViewModel {
             scrollHorizontal = mouseStats.scrollH
             firstActiveAt = liveActivity.first
             lastActiveAt = liveActivity.last
+            peakMouseSpeed = 0
+            peakWPM = 0
         }
 
         calculateGoalProgress()
@@ -206,6 +214,11 @@ final class MenuBarViewModel {
     func loadHourlySummaries() {
         let today = todayString()
         hourlySummaries = DatabaseManager.shared.getHourlySummaries(date: today)
+    }
+
+    func loadAppUsage() {
+        let today = todayString()
+        appUsageEntries = DatabaseManager.shared.getAppUsage(date: today)
     }
 
     func chartDistance(_ pixels: Double, unit: DistanceUnit) -> Double {

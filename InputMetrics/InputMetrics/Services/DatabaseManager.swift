@@ -55,6 +55,8 @@ final class DatabaseManager: @unchecked Sendable {
         registerV5Migration(&migrator)
         registerV6Migration(&migrator)
         registerV7Migration(&migrator)
+        registerV8Migration(&migrator)
+        registerV9Migration(&migrator)
 
         return migrator
     }
@@ -138,6 +140,30 @@ final class DatabaseManager: @unchecked Sendable {
         }
     }
 
+    private func registerV8Migration(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v8") { db in
+            try db.create(table: "app_usage") { t in
+                t.column("date", .text)
+                t.column("bundle_id", .text)
+                t.column("app_name", .text).defaults(to: "")
+                t.column("keystrokes", .integer).defaults(to: 0)
+                t.column("mouse_clicks", .integer).defaults(to: 0)
+                t.column("active_seconds", .integer).defaults(to: 0)
+                t.primaryKey(["date", "bundle_id"])
+            }
+        }
+    }
+
+    private func registerV9Migration(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v9") { db in
+            try db.alter(table: "daily_summary") { t in
+                t.add(column: "avg_mouse_speed", .double).defaults(to: 0)
+                t.add(column: "peak_mouse_speed", .double).defaults(to: 0)
+                t.add(column: "peak_wpm", .double).defaults(to: 0)
+            }
+        }
+    }
+
     // MARK: - Daily Summary Operations
 
     func updateDailySummary(
@@ -151,7 +177,10 @@ final class DatabaseManager: @unchecked Sendable {
         scrollHorizontal: Double = 0,
         firstActiveAt: String? = nil,
         lastActiveAt: String? = nil,
-        activeMinutes: Int = 0
+        activeMinutes: Int = 0,
+        avgMouseSpeed: Double = 0,
+        peakMouseSpeed: Double = 0,
+        peakWPM: Double = 0
     ) {
         guard let db = dbQueue else { return }
 
@@ -160,8 +189,8 @@ final class DatabaseManager: @unchecked Sendable {
                 try db.write { db in
                     try db.execute(
                         sql: """
-                            INSERT INTO daily_summary (date, mouse_distance_px, mouse_clicks_left, mouse_clicks_right, mouse_clicks_middle, keystrokes, scroll_distance_vertical, scroll_distance_horizontal, first_active_at, last_active_at, active_minutes)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO daily_summary (date, mouse_distance_px, mouse_clicks_left, mouse_clicks_right, mouse_clicks_middle, keystrokes, scroll_distance_vertical, scroll_distance_horizontal, first_active_at, last_active_at, active_minutes, avg_mouse_speed, peak_mouse_speed, peak_wpm)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             ON CONFLICT(date) DO UPDATE SET
                                 mouse_distance_px = mouse_distance_px + excluded.mouse_distance_px,
                                 mouse_clicks_left = mouse_clicks_left + excluded.mouse_clicks_left,
@@ -172,9 +201,12 @@ final class DatabaseManager: @unchecked Sendable {
                                 scroll_distance_horizontal = scroll_distance_horizontal + excluded.scroll_distance_horizontal,
                                 first_active_at = COALESCE(daily_summary.first_active_at, excluded.first_active_at),
                                 last_active_at = COALESCE(excluded.last_active_at, daily_summary.last_active_at),
-                                active_minutes = active_minutes + excluded.active_minutes
+                                active_minutes = active_minutes + excluded.active_minutes,
+                                avg_mouse_speed = CASE WHEN excluded.avg_mouse_speed > 0 THEN excluded.avg_mouse_speed ELSE daily_summary.avg_mouse_speed END,
+                                peak_mouse_speed = MAX(daily_summary.peak_mouse_speed, excluded.peak_mouse_speed),
+                                peak_wpm = MAX(daily_summary.peak_wpm, excluded.peak_wpm)
                             """,
-                        arguments: [date, mouseDistance, leftClicks, rightClicks, middleClicks, keystrokes, scrollVertical, scrollHorizontal, firstActiveAt, lastActiveAt, activeMinutes]
+                        arguments: [date, mouseDistance, leftClicks, rightClicks, middleClicks, keystrokes, scrollVertical, scrollHorizontal, firstActiveAt, lastActiveAt, activeMinutes, avgMouseSpeed, peakMouseSpeed, peakWPM]
                     )
                 }
             } catch {
@@ -447,6 +479,49 @@ final class DatabaseManager: @unchecked Sendable {
         }
     }
 
+    // MARK: - App Usage Operations
+
+    func updateAppUsage(date: String, bundleId: String, appName: String, keystrokes: Int = 0, mouseClicks: Int = 0, activeSeconds: Int = 0) {
+        guard let db = dbQueue else { return }
+
+        dbQueue_serial.async {
+            do {
+                try db.write { db in
+                    try db.execute(
+                        sql: """
+                            INSERT INTO app_usage (date, bundle_id, app_name, keystrokes, mouse_clicks, active_seconds)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                            ON CONFLICT(date, bundle_id) DO UPDATE SET
+                                app_name = excluded.app_name,
+                                keystrokes = keystrokes + excluded.keystrokes,
+                                mouse_clicks = mouse_clicks + excluded.mouse_clicks,
+                                active_seconds = active_seconds + excluded.active_seconds
+                            """,
+                        arguments: [date, bundleId, appName, keystrokes, mouseClicks, activeSeconds]
+                    )
+                }
+            } catch {
+                AppLogger.database.error("Update app usage failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func getAppUsage(date: String) -> [AppUsageEntry] {
+        guard let db = dbQueue else { return [] }
+
+        do {
+            return try db.read { db in
+                try AppUsageEntry
+                    .filter(AppUsageEntry.Columns.date == date)
+                    .order(AppUsageEntry.Columns.keystrokes.desc)
+                    .fetchAll(db)
+            }
+        } catch {
+            AppLogger.database.error("Fetch app usage failed: \(error.localizedDescription)")
+            return []
+        }
+    }
+
     // MARK: - Aggregated Totals
 
     struct AllTimeTotals {
@@ -609,6 +684,7 @@ final class DatabaseManager: @unchecked Sendable {
                     try db.execute(sql: "DELETE FROM \(MouseHeatmapEntry.databaseTableName)")
                     try db.execute(sql: "DELETE FROM \(KeyboardEntry.databaseTableName)")
                     try db.execute(sql: "DELETE FROM \(HourlySummary.databaseTableName)")
+                    try db.execute(sql: "DELETE FROM \(AppUsageEntry.databaseTableName)")
                 }
                 AppLogger.database.info("All data reset")
             } catch {
@@ -637,6 +713,7 @@ final class DatabaseManager: @unchecked Sendable {
                     try db.execute(sql: "DELETE FROM mouse_heatmap WHERE date < ?", arguments: [cutoffString])
                     try db.execute(sql: "DELETE FROM keyboard_heatmap WHERE date < ?", arguments: [cutoffString])
                     try db.execute(sql: "DELETE FROM hourly_summary WHERE date < ?", arguments: [cutoffString])
+                    try db.execute(sql: "DELETE FROM app_usage WHERE date < ?", arguments: [cutoffString])
                     try db.execute(sql: "VACUUM")
                 }
                 AppLogger.database.info("Pruned data older than \(cutoffString)")

@@ -16,8 +16,7 @@ struct MiniKeyboardHeatmap: View {
     }
 
     private var keyboardLayout: [[(keyCode: Int, label: String, width: CGFloat)]] {
-        let layout = KeyCodeMapping.detectCurrentLayout()
-        let label = { (keyCode: Int) in KeyCodeMapping.keyName(for: keyCode, layout: layout) }
+        let label = { (keyCode: Int) in KeyCodeMapping.keyName(for: keyCode) }
         return [
             // Number row
             [(50, label(50), 1), (18, label(18), 1), (19, label(19), 1), (20, label(20), 1), (21, label(21), 1), (23, label(23), 1), (22, label(22), 1), (26, label(26), 1), (28, label(28), 1), (25, label(25), 1), (29, label(29), 1), (27, label(27), 1), (24, label(24), 1)],
