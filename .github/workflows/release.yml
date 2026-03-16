@@ -60,7 +60,7 @@ jobs:
 
       - name: Re-sign nested LaunchAtLogin helpers
         run: |
-          APP="build/export/InputMetrics.app"
+          APP="$(pwd)/build/export/InputMetrics.app"
           BUNDLE="$APP/Contents/Resources/LaunchAtLogin_LaunchAtLogin.bundle/Contents/Resources"
           IDENTITY="Developer ID Application"
 
