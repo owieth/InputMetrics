@@ -294,11 +294,13 @@ struct SettingsView: View {
 
                     // Data Section
                     SettingsSectionView(title: "Data", icon: "externaldrive") {
-                        VStack(spacing: 12) {
-                            SettingsRowView {
-                                VStack(alignment: .leading, spacing: 12) {
+                        SettingsGroupView {
+                            SettingsGroupItemView {
+                                HStack {
                                     Label("Export format", systemImage: "doc")
                                         .font(.body)
+
+                                    Spacer()
 
                                     Picker("", selection: $exportFormat) {
                                         ForEach(ExportFormat.allCases, id: \.self) { format in
@@ -307,130 +309,137 @@ struct SettingsView: View {
                                     }
                                     .pickerStyle(.segmented)
                                     .labelsHidden()
+                                    .frame(width: 140)
                                 }
                             }
 
-                            Button(action: {
-                                exportData()
-                            }) {
-                                HStack {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.title3)
-                                        .foregroundStyle(.blue)
+                            Divider()
+                                .padding(.horizontal)
 
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Export data")
-                                            .font(.body.weight(.medium))
-                                            .foregroundStyle(.primary)
+                            SettingsGroupItemView {
+                                Button(action: {
+                                    exportData()
+                                }) {
+                                    HStack {
+                                        Image(systemName: "square.and.arrow.up")
+                                            .font(.title3)
+                                            .foregroundStyle(.blue)
 
-                                        Text("Save your metrics as \(exportFormat.rawValue)")
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Export data")
+                                                .font(.body.weight(.medium))
+                                                .foregroundStyle(.primary)
+
+                                            Text("Save your metrics as \(exportFormat.rawValue)")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
                                             .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(.tertiary)
                                     }
-
-                                    Spacer()
-
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
                                 }
-                                .padding()
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(12)
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
 
-                            Button(action: {
-                                backupDatabase()
-                            }) {
-                                HStack {
-                                    Image(systemName: "arrow.down.doc")
-                                        .font(.title3)
-                                        .foregroundStyle(.blue)
+                            Divider()
+                                .padding(.horizontal)
 
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Backup database")
-                                            .font(.body.weight(.medium))
-                                            .foregroundStyle(.primary)
+                            SettingsGroupItemView {
+                                Button(action: {
+                                    backupDatabase()
+                                }) {
+                                    HStack {
+                                        Image(systemName: "arrow.down.doc")
+                                            .font(.title3)
+                                            .foregroundStyle(.blue)
 
-                                        Text("Save a full copy of your database")
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Backup database")
+                                                .font(.body.weight(.medium))
+                                                .foregroundStyle(.primary)
+
+                                            Text("Save a full copy of your database")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
                                             .font(.caption)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(.tertiary)
                                     }
-
-                                    Spacer()
-
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
                                 }
-                                .padding()
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(12)
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
-
-                            Button(action: {
-                                showRestoreConfirmation = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "arrow.up.doc")
-                                        .font(.title3)
-                                        .foregroundStyle(.orange)
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Restore database")
-                                            .font(.body.weight(.medium))
-                                            .foregroundStyle(.primary)
-
-                                        Text("Replace current data from a backup")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-
-                                    Spacer()
-
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                }
-                                .padding()
-                                .background(Color.orange.opacity(0.1))
-                                .cornerRadius(12)
-                            }
-                            .buttonStyle(.plain)
-
-                            Button(action: {
-                                showResetConfirmation = true
-                            }) {
-                                HStack {
-                                    Image(systemName: "trash")
-                                        .font(.title3)
-                                        .foregroundStyle(.red)
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Reset all data")
-                                            .font(.body.weight(.medium))
-                                            .foregroundStyle(.primary)
-
-                                        Text("Permanently delete all metrics")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-
-                                    Spacer()
-
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                }
-                                .padding()
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(12)
-                            }
-                            .buttonStyle(.plain)
                         }
-                        .padding(.horizontal)
+
+                        SettingsGroupView {
+                            SettingsGroupItemView {
+                                Button(action: {
+                                    showRestoreConfirmation = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "arrow.up.doc")
+                                            .font(.title3)
+                                            .foregroundStyle(.orange)
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Restore database")
+                                                .font(.body.weight(.medium))
+                                                .foregroundStyle(.primary)
+
+                                            Text("Replace current data from a backup")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+
+                            Divider()
+                                .padding(.horizontal)
+
+                            SettingsGroupItemView {
+                                Button(action: {
+                                    showResetConfirmation = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "trash")
+                                            .font(.title3)
+                                            .foregroundStyle(.red)
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Reset all data")
+                                                .font(.body.weight(.medium))
+                                                .foregroundStyle(.primary)
+
+                                            Text("Permanently delete all metrics")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
 
                     #if DEBUG
