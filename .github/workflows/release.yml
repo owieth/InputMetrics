@@ -26,8 +26,10 @@ jobs:
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           BUILD_NUMBER=$(git rev-list --count HEAD)
+          COMMIT_HASH=$(git rev-parse --short=5 HEAD)
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" InputMetrics/InputMetrics/Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" InputMetrics/InputMetrics/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CommitHash $COMMIT_HASH" InputMetrics/InputMetrics/Info.plist
 
       - name: Import signing certificate
         env:
