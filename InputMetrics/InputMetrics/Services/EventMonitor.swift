@@ -35,7 +35,7 @@ class EventMonitor {
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "HH:mm"
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm"
         return f
     }()
 

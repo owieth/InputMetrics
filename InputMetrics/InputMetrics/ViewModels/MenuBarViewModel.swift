@@ -42,6 +42,47 @@ final class MenuBarViewModel {
         leftClicks + rightClicks + middleClicks
     }
 
+    var formattedActiveTimeRange: String? {
+        guard let first = firstActiveAt, let last = lastActiveAt else { return nil }
+
+        let isoFormatter = DateFormatter()
+        isoFormatter.locale = Locale(identifier: "en_US_POSIX")
+        isoFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
+
+        let legacyFormatter = DateFormatter()
+        legacyFormatter.locale = Locale(identifier: "en_US_POSIX")
+        legacyFormatter.dateFormat = "HH:mm"
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.locale = Locale(identifier: "en_US_POSIX")
+        timeFormatter.dateFormat = "HH:mm"
+
+        let dateTimeFormatter = DateFormatter()
+        dateTimeFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateTimeFormatter.dateFormat = "MMM d, HH:mm"
+
+        func parse(_ value: String) -> Date? {
+            isoFormatter.date(from: value) ?? legacyFormatter.date(from: value)
+        }
+
+        guard let firstDate = parse(first), let lastDate = parse(last) else {
+            return "\(first) - \(last)"
+        }
+
+        let firstIsISO = isoFormatter.date(from: first) != nil
+        let lastIsISO = isoFormatter.date(from: last) != nil
+
+        // Only show dates if both values carry date info and they span different days
+        if firstIsISO && lastIsISO {
+            let calendar = Calendar.current
+            if calendar.startOfDay(for: firstDate) != calendar.startOfDay(for: lastDate) {
+                return "\(dateTimeFormatter.string(from: firstDate)) - \(dateTimeFormatter.string(from: lastDate))"
+            }
+        }
+
+        return "\(timeFormatter.string(from: firstDate)) - \(timeFormatter.string(from: lastDate))"
+    }
+
     var topKeys: [KeyboardEntry] {
         Array(keyboardEntries.sorted { $0.count > $1.count }.prefix(5))
     }

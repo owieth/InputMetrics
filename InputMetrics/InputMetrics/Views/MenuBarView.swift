@@ -97,9 +97,8 @@ struct MenuBarView: View {
                             .font(.title3)
                             .foregroundStyle(.teal)
 
-                        if let first = viewModel.firstActiveAt,
-                           let last = viewModel.lastActiveAt {
-                            Text("\(first) - \(last)")
+                        if let range = viewModel.formattedActiveTimeRange {
+                            Text(range)
                                 .font(.headline.monospacedDigit())
                         } else {
                             Text("Activity tracking will begin as you use your Mac")
