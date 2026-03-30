@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import os
+import Sparkle
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
@@ -11,6 +12,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var backgroundActivity: NSObjectProtocol?
     private var keyboardPermissionTimer: Timer?
     private var isQuittingFromMenu = false
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Prevent App Nap from suspending background event monitoring
@@ -111,6 +117,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let menu = NSMenu()
             menu.addItem(NSMenuItem(title: "Settings", action: #selector(openSettings), keyEquivalent: ","))
             menu.addItem(NSMenuItem.separator())
+            let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+            updateItem.target = self
+            menu.addItem(updateItem)
+            menu.addItem(NSMenuItem.separator())
             menu.addItem(NSMenuItem(title: "Quit InputMetrics", action: #selector(quitApp), keyEquivalent: "q"))
 
             statusItem?.menu = menu
@@ -138,6 +148,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openSettings() {
         WindowManager.shared.openSettingsWindow()
+    }
+
+    @objc private func checkForUpdates() {
+        updaterController.checkForUpdates(nil)
     }
 
     @objc private func quitApp() {
