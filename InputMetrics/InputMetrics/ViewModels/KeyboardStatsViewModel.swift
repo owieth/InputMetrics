@@ -86,6 +86,10 @@ final class KeyboardStatsViewModel {
             }
         }
 
+        if selectedRange == .week || selectedRange == .month {
+            chartData = chartData.fillingMissingDays(from: startDate, to: selectedDate)
+        }
+
         if selectedRange == .year {
             chartData = aggregateByWeek(chartData)
         }
