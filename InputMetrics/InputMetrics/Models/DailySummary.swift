@@ -52,4 +52,24 @@ struct DailySummary: Codable, FetchableRecord, PersistableRecord {
         static let peakMouseSpeed = Column(CodingKeys.peakMouseSpeed)
         static let peakWPM = Column(CodingKeys.peakWPM)
     }
+
+    static func zero(for date: String) -> DailySummary {
+        DailySummary(date: date, mouseDistancePx: 0, mouseClicksLeft: 0, mouseClicksRight: 0, mouseClicksMiddle: 0, keystrokes: 0, scrollDistanceVertical: 0, scrollDistanceHorizontal: 0)
+    }
+}
+
+extension [DailySummary] {
+    func fillingMissingDays(from start: Date, to end: Date) -> [DailySummary] {
+        let calendar = Calendar.current
+        let formatter = DateHelper.self
+        let existing = Dictionary(uniqueKeysWithValues: self.map { ($0.date, $0) })
+        var result: [DailySummary] = []
+        var current = start
+        while current <= end {
+            let key = formatter.string(from: current)
+            result.append(existing[key] ?? .zero(for: key))
+            current = calendar.date(byAdding: .day, value: 1, to: current) ?? current
+        }
+        return result
+    }
 }
