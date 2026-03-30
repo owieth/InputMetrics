@@ -61,27 +61,26 @@ final class MenuBarViewModel {
         dateTimeFormatter.locale = Locale(identifier: "en_US_POSIX")
         dateTimeFormatter.dateFormat = "MMM d, HH:mm"
 
-        let isFirstISO = isoFormatter.date(from: first) != nil
-        let isLastISO = isoFormatter.date(from: last) != nil
-
-        guard isFirstISO && isLastISO,
-              let firstDate = isoFormatter.date(from: first),
-              let lastDate = isoFormatter.date(from: last) else {
-            // Legacy HH:mm values — no date info, just display as-is
-            let firstDisplay = legacyFormatter.date(from: first).map { timeFormatter.string(from: $0) } ?? first
-            let lastDisplay = legacyFormatter.date(from: last).map { timeFormatter.string(from: $0) } ?? last
-            return "\(firstDisplay) - \(lastDisplay)"
+        func parse(_ value: String) -> Date? {
+            isoFormatter.date(from: value) ?? legacyFormatter.date(from: value)
         }
 
-        let calendar = Calendar.current
-        let firstDay = calendar.startOfDay(for: firstDate)
-        let lastDay = calendar.startOfDay(for: lastDate)
-
-        if firstDay == lastDay {
-            return "\(timeFormatter.string(from: firstDate)) - \(timeFormatter.string(from: lastDate))"
-        } else {
-            return "\(dateTimeFormatter.string(from: firstDate)) - \(dateTimeFormatter.string(from: lastDate))"
+        guard let firstDate = parse(first), let lastDate = parse(last) else {
+            return "\(first) - \(last)"
         }
+
+        let firstIsISO = isoFormatter.date(from: first) != nil
+        let lastIsISO = isoFormatter.date(from: last) != nil
+
+        // Only show dates if both values carry date info and they span different days
+        if firstIsISO && lastIsISO {
+            let calendar = Calendar.current
+            if calendar.startOfDay(for: firstDate) != calendar.startOfDay(for: lastDate) {
+                return "\(dateTimeFormatter.string(from: firstDate)) - \(dateTimeFormatter.string(from: lastDate))"
+            }
+        }
+
+        return "\(timeFormatter.string(from: firstDate)) - \(timeFormatter.string(from: lastDate))"
     }
 
     var topKeys: [KeyboardEntry] {
