@@ -42,6 +42,41 @@ final class MenuBarViewModel {
         leftClicks + rightClicks + middleClicks
     }
 
+    var formattedActiveTimeRange: String? {
+        guard let first = firstActiveAt, let last = lastActiveAt else { return nil }
+
+        let isoFormatter = DateFormatter()
+        isoFormatter.locale = Locale(identifier: "en_US_POSIX")
+        isoFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
+
+        let legacyFormatter = DateFormatter()
+        legacyFormatter.locale = Locale(identifier: "en_US_POSIX")
+        legacyFormatter.dateFormat = "HH:mm"
+
+        let timeFormatter = DateFormatter()
+        timeFormatter.locale = Locale(identifier: "en_US_POSIX")
+        timeFormatter.dateFormat = "HH:mm"
+
+        let dateTimeFormatter = DateFormatter()
+        dateTimeFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateTimeFormatter.dateFormat = "MMM d, HH:mm"
+
+        guard let firstDate = isoFormatter.date(from: first) ?? legacyFormatter.date(from: first),
+              let lastDate = isoFormatter.date(from: last) ?? legacyFormatter.date(from: last) else {
+            return "\(first) - \(last)"
+        }
+
+        let calendar = Calendar.current
+        let firstDay = calendar.startOfDay(for: firstDate)
+        let lastDay = calendar.startOfDay(for: lastDate)
+
+        if firstDay == lastDay {
+            return "\(timeFormatter.string(from: firstDate)) - \(timeFormatter.string(from: lastDate))"
+        } else {
+            return "\(dateTimeFormatter.string(from: firstDate)) - \(dateTimeFormatter.string(from: lastDate))"
+        }
+    }
+
     var topKeys: [KeyboardEntry] {
         Array(keyboardEntries.sorted { $0.count > $1.count }.prefix(5))
     }
