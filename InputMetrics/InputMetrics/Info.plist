@@ -43,6 +43,12 @@
 			</array>
 		</dict>
 	</array>
+	<key>SUPublicEDKey</key>
+	<string>9LrnDKtkBq1IcxjOFHBNmH8xdEH+MVhyZOI5nfVpR1o=</string>
+	<key>SUFeedURL</key>
+	<string>https://owieth.github.io/InputMetrics/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
 	<key>NSPrincipalClass</key>

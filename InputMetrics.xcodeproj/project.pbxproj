@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DFEF2B492F7ABE0D00B1FB6B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = DFEF2B482F7ABE0D00B1FB6B /* Sparkle */; };
 		GRDB_PKG /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = GRDB_REF /* GRDB */; };
 /* End PBXBuildFile section */
 
@@ -57,6 +58,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				GRDB_PKG /* GRDB in Frameworks */,
+				DFEF2B492F7ABE0D00B1FB6B /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,6 +111,7 @@
 			name = InputMetrics;
 			packageProductDependencies = (
 				GRDB_REF /* GRDB */,
+				DFEF2B482F7ABE0D00B1FB6B /* Sparkle */,
 			);
 			productName = InputMetrics;
 			productReference = APP_PRODUCT /* InputMetrics.app */;
@@ -156,6 +159,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				GRDB_PACKAGE /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				DFEF2B472F7ABE0D00B1FB6B /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = PRODUCTS_GROUP /* Products */;
@@ -460,6 +464,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		DFEF2B472F7ABE0D00B1FB6B /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.1;
+			};
+		};
 		GRDB_PACKAGE /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/groue/GRDB.swift.git";
@@ -471,6 +483,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		DFEF2B482F7ABE0D00B1FB6B /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DFEF2B472F7ABE0D00B1FB6B /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
 		GRDB_REF /* GRDB */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = GRDB_PACKAGE /* XCRemoteSwiftPackageReference "GRDB.swift" */;
