@@ -26,32 +26,31 @@ struct ChartView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Chart(data, id: \.date) { item in
-                    let label = formatLabel(from: item.date)
                     let value = metricValue(for: item)
 
+                    AreaMark(
+                        x: .value("Date", item.date),
+                        y: .value("Value", value)
+                    )
+                    .foregroundStyle(Color.blue.opacity(0.15))
+                    .interpolationMethod(.catmullRom)
+
                     LineMark(
-                        x: .value("Date", label),
+                        x: .value("Date", item.date),
                         y: .value("Value", value)
                     )
                     .foregroundStyle(Color.blue)
                     .interpolationMethod(.catmullRom)
 
-                    AreaMark(
-                        x: .value("Date", label),
-                        y: .value("Value", value)
-                    )
-                    .foregroundStyle(Color.blue.opacity(0.1))
-                    .interpolationMethod(.catmullRom)
-
                     PointMark(
-                        x: .value("Date", label),
+                        x: .value("Date", item.date),
                         y: .value("Value", value)
                     )
                     .foregroundStyle(Color.blue)
                     .symbolSize(30)
 
-                    if hoveredLabel == label {
-                        RuleMark(x: .value("Date", label))
+                    if hoveredLabel == item.date {
+                        RuleMark(x: .value("Date", item.date))
                             .foregroundStyle(Color.secondary.opacity(0.3))
                             .annotation(position: .top, spacing: 4) {
                                 Text(formattedTooltip(value: value))
@@ -61,6 +60,18 @@ struct ChartView: View {
                                     .background(Color(nsColor: .controlBackgroundColor))
                                     .cornerRadius(4)
                             }
+                    }
+                }
+                .chartLegend(.hidden)
+                .chartXAxis {
+                    AxisMarks { value in
+                        AxisValueLabel {
+                            if let dateStr = value.as(String.self) {
+                                Text(formatLabel(from: dateStr))
+                            }
+                        }
+                        AxisGridLine()
+                        AxisTick()
                     }
                 }
                 .accessibilityElement(children: .ignore)
