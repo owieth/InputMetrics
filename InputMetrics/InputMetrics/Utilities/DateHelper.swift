@@ -19,4 +19,5 @@ enum DateHelper {
     static func date(from string: String) -> Date? {
         formatter.date(from: string)
     }
+
 }
